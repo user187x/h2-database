@@ -1,4 +1,4 @@
-package com.xxx;
+package com.xxx.service;
 
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;

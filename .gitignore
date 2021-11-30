@@ -1,6 +1,11 @@
 # folders
 /target
 
+# Eclipse-isms
+.project
+.settings
+.classpath
+
 # Compiled class file
 *.class
 

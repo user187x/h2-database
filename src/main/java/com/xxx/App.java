@@ -2,6 +2,7 @@ package com.xxx;
 
 import java.util.Optional;
 import com.xxx.model.Event;
+import com.xxx.service.DatabaseService;
 
 public class App {
 
