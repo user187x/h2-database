@@ -3,11 +3,11 @@ package com.xxx.model;
 import java.sql.Timestamp;
 import java.util.UUID;
 
-public class Event {
+public class NodeSubscription {
 
   private String id = UUID.randomUUID().toString();
   private String subscriptionId;
-  private String message;
+  private String nodeId;
   private Timestamp created;
 
   public String getId() {
@@ -26,12 +26,12 @@ public class Event {
     this.subscriptionId = subscriptionId;
   }
 
-  public String getMessage() {
-    return message;
+  public String getNodeId() {
+    return nodeId;
   }
 
-  public void setMessage(String message) {
-    this.message = message;
+  public void setNodeId(String nodeId) {
+    this.nodeId = nodeId;
   }
 
   public Timestamp getCreated() {
