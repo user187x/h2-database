@@ -2,6 +2,7 @@ package com.xxx.service;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.util.List;
 import java.util.Optional;
 import java.util.logging.Logger;
 import org.jooq.impl.DSL;
@@ -41,38 +42,97 @@ public class DatabaseService {
   
   public boolean nodeExists(Node node) {
     
-    return Optional.ofNullable(DSL.using(getConnection())
+    Optional<List<Node>> list = Optional.ofNullable(DSL.using(getConnection())
     .select()
-    .from(DSL.table("NODES"))
+    .from(DSL.table(Tables.NODES.name()))
     .where(DSL.field("ID").eq(node.getId()))
     .fetch()
-    .into(Node.class)).isPresent();
+    .into(Node.class));
+    
+    if(list.isPresent()) {
+      
+      List<Node> nodeList = list.get();
+      
+      if(nodeList.isEmpty())
+        return false;
+      else
+        return true;
+    }
+    
+    return false;
   }
   
   public boolean subscriptionExists(Subscription subscription) {
     
-    return Optional.ofNullable(DSL.using(getConnection())
+    Optional<List<Subscription>> list = Optional.ofNullable(DSL.using(getConnection())
     .select()
-    .from(DSL.table("SUBSCRIPTIONS"))
+    .from(DSL.table(Tables.SUBSCRIPTIONS.name()))
     .where(DSL.field("ID").eq(subscription.getId()))
     .fetch()
-    .into(Node.class)).isPresent();
+    .into(Subscription.class));
+    
+    if(list.isPresent()) {
+      
+      List<Subscription> subscriptionList = list.get();
+      
+      if(subscriptionList.isEmpty())
+        return false;
+      else
+        return true;
+    }
+    
+    return false;
   }
   
   public boolean nodeSubscriptionExists(NodeSubscription nodeSubscription) {
     
-    return Optional.ofNullable(DSL.using(getConnection())
+    Optional<List<Subscription>> list = Optional.ofNullable(DSL.using(getConnection())
     .select()
-    .from(DSL.table("NODE_SUBSCRIPTIONS"))
+    .from(DSL.table(Tables.NODE_SUBSCRIPTIONS.name()))
     .where(DSL.field("ID").eq(nodeSubscription.getId()))
     .fetch()
-    .into(Node.class)).isPresent();
+    .into(Subscription.class));
+    
+    if(list.isPresent()) {
+      
+      List<Subscription> nodeList = list.get();
+      
+      if(nodeList.isEmpty())
+        return false;
+      else
+        return true;
+    }
+    
+    return false;
+  }
+  
+  public boolean nodeSubscriptionExists(Node node, Subscription subscription) {
+    
+    Optional<List<NodeSubscription>> nodeSubscription = Optional.ofNullable(DSL.using(getConnection())
+    .select()
+    .from(DSL.table(Tables.NODE_SUBSCRIPTIONS.name()))
+    .where(DSL.field("NODE_ID").eq(node.getId())
+        .and(DSL.field("SUBSCRIPTION_ID").eq(subscription.getId())))
+    .fetch()
+    .into(NodeSubscription.class));
+    
+    if(nodeSubscription.isPresent()) {
+      
+      List<NodeSubscription> nodeSubscriptions = nodeSubscription.get();
+      
+      if(nodeSubscriptions.isEmpty())
+        return false;
+      else
+        return true;
+    }
+      
+    return false;
   }
   
   public boolean saveNode(Node node) {
     
     boolean success = Optional.ofNullable(DSL.using(getConnection())
-    .insertInto(DSL.table("NODES"), DSL.field("ID"), DSL.field("HEALTHY"), DSL.field("LAST_SEEN"), DSL.field("CREATED"))
+    .insertInto(DSL.table(Tables.NODES.name()), DSL.field("ID"), DSL.field("HEALTHY"), DSL.field("LAST_SEEN"), DSL.field("CREATED"))
     .values(node.getId(), node.isHealthy(), node.getLastSeen(), node.getCreated())
     .execute())
     .map(count -> count == 1)
@@ -108,7 +168,7 @@ public class DatabaseService {
   public boolean saveNodeSubscription(NodeSubscription nodeSubscription) {
     
     boolean success = Optional.ofNullable(DSL.using(getConnection())
-    .insertInto(DSL.table("NODE_SUBSCRIPTIONS"), DSL.field("ID"), DSL.field("SUBSCRIPTION_ID"), DSL.field("NODE_ID"), DSL.field("CREATED"))
+    .insertInto(DSL.table(Tables.NODE_SUBSCRIPTIONS.name()), DSL.field("ID"), DSL.field("SUBSCRIPTION_ID"), DSL.field("NODE_ID"), DSL.field("CREATED"))
     .values(nodeSubscription.getId(), nodeSubscription.getSubscriptionId(), nodeSubscription.getNodeId(), nodeSubscription.getCreated())
     .execute())
     .map(count -> count == 1)
@@ -139,6 +199,17 @@ public class DatabaseService {
     .into(Node.class));
   }
   
+  public List<Node> getNodes() {
+    
+    List<Node> nodes = DSL.using(getConnection())
+    .select()
+    .from(DSL.table(Tables.NODES.name()))
+    .fetch()
+    .into(Node.class);
+    
+    return nodes;
+  }
+  
   public Optional<Event> getEventById(String id) {
     
     return Optional.ofNullable(DSL.using(getConnection())
@@ -147,6 +218,17 @@ public class DatabaseService {
     .where(DSL.field("ID").eq(id))
     .fetchOne()
     .into(Event.class));
+  }
+  
+  public List<Event> getEvents() {
+    
+    List<Event> events = DSL.using(getConnection())
+    .select()
+    .from(DSL.table(Tables.EVENTS.name()))
+    .fetch()
+    .into(Event.class);
+    
+    return events;
   }
   
   public Optional<Subscription> getSubscriptionById(String id) {
@@ -159,6 +241,78 @@ public class DatabaseService {
     .into(Subscription.class));
   }
   
+  public List<Subscription> getSubscriptions() {
+    
+    List<Subscription> subscriptions = DSL.using(getConnection())
+    .select()
+    .from(DSL.table(Tables.SUBSCRIPTIONS.name()))
+    .fetch()
+    .into(Subscription.class);
+    
+    return subscriptions;
+  }
+  
+  public List<UndeliveredEvent> getUndeliveredEvents() {
+    
+    List<UndeliveredEvent> undeliveredEvents = DSL.using(getConnection())
+    .select()
+    .from(DSL.table(Tables.UNDELIVERED_EVENTS.name()))
+    .fetch()
+    .into(UndeliveredEvent.class);
+    
+    return undeliveredEvents;
+  }
+  
+  public List<Event> getUndeliveredEvents(Node node) {
+    
+    List<Event> undeliveredEvents = DSL.using(getConnection())
+    .select()
+    .from(DSL.table(Tables.UNDELIVERED_EVENTS.name())).join(Tables.EVENTS.name())
+      .on(DSL.field("UNDELIVERED_EVENTS.EVENT_ID").eq(DSL.field("EVENTS.ID")))
+    .where(DSL.field("NODE_ID").eq(node.getId()))
+    .fetch()
+    .into(Event.class);
+    
+    return undeliveredEvents;
+  }
+  
+  public List<Subscription> getSubscriptions(Node node) {
+    
+    List<Subscription> subscriptions = DSL.using(getConnection())
+    .select()
+    .from(DSL.table(Tables.NODE_SUBSCRIPTIONS.name())).join(Tables.SUBSCRIPTIONS.name())
+      .on(DSL.field("NODE_SUBSCRIPTIONS.SUBSCRIPTION_ID").eq(DSL.field("SUBSCRIPTIONS.ID")))
+    .where(DSL.field("NODE_SUBSCRIPTIONS.NODE_ID").eq(node.getId()))
+    .fetch()
+    .into(Subscription.class);
+    
+    return subscriptions;
+  }
+  
+  public boolean addSubscription(Node node, Subscription subscription) {
+    
+    if(nodeSubscriptionExists(node, subscription))
+      return true;
+    
+    NodeSubscription nodeSubscription = new NodeSubscription();
+    nodeSubscription.setNodeId(node.getId());
+    nodeSubscription.setSubscriptionId(subscription.getId());
+    
+    boolean exists = subscriptionExists(subscription);
+    
+    if(!exists)
+      saveSubscription(subscription);
+    
+    boolean success = Optional.ofNullable(DSL.using(getConnection())
+    .insertInto(DSL.table(Tables.NODE_SUBSCRIPTIONS.name()), DSL.field("ID"), DSL.field("NODE_ID"), DSL.field("SUBSCRIPTION_ID"), DSL.field("CREATED"))
+    .values(nodeSubscription.getId(), nodeSubscription.getNodeId(), nodeSubscription.getSubscriptionId(), nodeSubscription.getCreated())
+    .execute())
+    .map(count -> count == 1)
+    .get();
+    
+    return success;
+  }
+  
   public Optional<NodeSubscription> getNodeSubscriptionById(String id) {
     
     return Optional.ofNullable(DSL.using(getConnection())
@@ -167,5 +321,28 @@ public class DatabaseService {
     .where(DSL.field("ID").eq(id))
     .fetchOne()
     .into(NodeSubscription.class));
+  }
+  
+  public List<NodeSubscription> getNodeSubscriptions() {
+    
+    List<NodeSubscription> nodeSubscriptions = DSL.using(getConnection())
+    .select()
+    .from(DSL.table(Tables.NODE_SUBSCRIPTIONS.name()))
+    .fetch()
+    .into(NodeSubscription.class);
+    
+    return nodeSubscriptions;
+  }
+  
+  public List<NodeSubscription> getNodeSubscriptions(Node node) {
+    
+    List<NodeSubscription> nodeSubscriptions = DSL.using(getConnection())
+    .select()
+    .from(DSL.table(Tables.NODE_SUBSCRIPTIONS.name()))
+    .where(DSL.field("NODE_ID").eq(node.getId()))
+    .fetch()
+    .into(NodeSubscription.class);
+    
+    return nodeSubscriptions;
   }
 }
