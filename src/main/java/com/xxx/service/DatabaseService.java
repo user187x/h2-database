@@ -1,20 +1,15 @@
 package com.xxx.service;
 
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.Statement;
 import java.util.Optional;
 import java.util.logging.Logger;
-import org.apache.commons.lang3.StringUtils;
 import org.jooq.impl.DSL;
 import com.xxx.model.Event;
 import com.xxx.model.Node;
 import com.xxx.model.NodeSubscription;
 import com.xxx.model.Subscription;
+import com.xxx.model.UndeliveredEvent;
 
 public class DatabaseService {
 
@@ -27,7 +22,12 @@ public class DatabaseService {
     try {
 
       connection = DriverManager.getConnection("jdbc:h2:mem:");
-      ensureTables(connection);
+      
+      TableCreator.createNodeTable(connection);
+      TableCreator.createSubscriptionTable(connection);
+      TableCreator.createNodeSubscriptionTable(connection);
+      TableCreator.createEventTable(connection);
+      TableCreator.createUndeliveredEventsTable(connection);
     } 
     catch (Exception e) {
 
@@ -35,24 +35,6 @@ public class DatabaseService {
     }
   }
   
-  private boolean ensureTables(Connection connection) {
-
-    try (Statement statement = connection.createStatement()) {
-
-      InputStream inputStream = DatabaseService.class.getResourceAsStream("/sql/Events.sql");
-      String sql = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
-
-      String formatted = sql.replace("\n", "").replace("\r", "");
-
-      return statement.execute(formatted);
-    } 
-    catch (Exception e) {
-
-      logger.warning("Failure creating tables " + e.getMessage());
-      return false;
-    }
-  }
-
   public Connection getConnection() {
     return connection;
   }
@@ -102,8 +84,20 @@ public class DatabaseService {
   public boolean saveEvent(Event event) {
     
     boolean success = Optional.ofNullable(DSL.using(getConnection())
-    .insertInto(DSL.table("EVENTS"), DSL.field("ID"), DSL.field("SUBSCRIPTION_ID"), DSL.field("MESSAGE"), DSL.field("CREATED"))
+    .insertInto(DSL.table(Tables.EVENTS.name()), DSL.field("ID"), DSL.field("SUBSCRIPTION_ID"), DSL.field("MESSAGE"), DSL.field("CREATED"))
     .values(event.getId(), event.getSubscriptionId(), event.getMessage(), event.getCreated())
+    .execute())
+    .map(count -> count == 1)
+    .get();
+    
+    return success;
+  }
+  
+  public boolean saveSubscription(Subscription subscription) {
+    
+    boolean success = Optional.ofNullable(DSL.using(getConnection())
+    .insertInto(DSL.table(Tables.SUBSCRIPTIONS.name()), DSL.field("ID"), DSL.field("TOPIC"), DSL.field("CREATED"))
+    .values(subscription.getId(), subscription.getTopic(), subscription.getCreated())
     .execute())
     .map(count -> count == 1)
     .get();
@@ -123,78 +117,55 @@ public class DatabaseService {
     return success;
   }
   
-  public boolean insert(Event event) {
+  public boolean saveUndeliveredEvent(UndeliveredEvent undeliveredEvent) {
     
-    boolean exists = exists(event);
+    boolean success = Optional.ofNullable(DSL.using(getConnection())
+    .insertInto(DSL.table(Tables.UNDELIVERED_EVENTS.name()), DSL.field("ID"), DSL.field("EVENT_ID"), DSL.field("NODE_ID"), DSL.field("CREATED"))
+    .values(undeliveredEvent.getId(), undeliveredEvent.getEventId(), undeliveredEvent.getNodeId(), undeliveredEvent.getCreated())
+    .execute())
+    .map(count -> count == 1)
+    .get();
     
-    if(exists)
-      return true;
-    
-    try {
-      
-      Statement statement = connection.createStatement();
-      
-      StringBuilder builder = new StringBuilder();
-      
-      builder.append("INSERT INTO EVENTS VALUES (");
-      builder.append("'" + event.getId() + "'");
-      builder.append(",");
-      builder.append("'" + event.getMessage() + "'");
-      builder.append(")");
-      
-      String sql = builder.toString();
-      statement.execute(sql);
-      
-      return true;
-    }
-    catch(Exception e) {
-     
-      logger.warning("Failure persisting entry");
-      return false;
-    }
-  }
-
-  public boolean exists(Event event) {
-    return getEventById(event.getId()).isPresent();
+    return success;
   }
   
-  public Optional<Event> getEventById(String eventId) {
-   
-    try {
-      
-      StringBuilder builder = new StringBuilder();
-      
-      builder.append("SELECT * FROM EVENTS");
-      builder.append(StringUtils.SPACE);
-      builder.append("WHERE");
-      builder.append(StringUtils.SPACE);
-      builder.append("ID=?");
-      
-      String sql = builder.toString();
-      
-      PreparedStatement statement = connection.prepareStatement(sql);
-      statement.setString(1, eventId);
-      
-      ResultSet resultSet = statement.executeQuery();
-      
-      while(resultSet.next()) {
-        
-        String id = resultSet.getString("ID");
-        String message = resultSet.getString("MESSAGE");
-        
-        Event event = new Event();
-        event.setId(id);
-        event.setMessage(message);
-        
-        return Optional.of(event);
-      }
-      
-      return Optional.empty();
-    }
-    catch(Exception e) {
-     
-      logger.warning("Failure persisting entry");
-      return Optional.empty();
-    }
+  public Optional<Node> getNodeById(String id) {
+    
+    return Optional.ofNullable(DSL.using(getConnection())
+    .select()
+    .from(DSL.table(Tables.NODES.name()))
+    .where(DSL.field("ID").eq(id))
+    .fetchOne()
+    .into(Node.class));
+  }
+  
+  public Optional<Event> getEventById(String id) {
+    
+    return Optional.ofNullable(DSL.using(getConnection())
+    .select()
+    .from(DSL.table(Tables.EVENTS.name()))
+    .where(DSL.field("ID").eq(id))
+    .fetchOne()
+    .into(Event.class));
+  }
+  
+  public Optional<Subscription> getSubscriptionById(String id) {
+    
+    return Optional.ofNullable(DSL.using(getConnection())
+    .select()
+    .from(DSL.table(Tables.SUBSCRIPTIONS.name()))
+    .where(DSL.field("ID").eq(id))
+    .fetchOne()
+    .into(Subscription.class));
+  }
+  
+  public Optional<NodeSubscription> getNodeSubscriptionById(String id) {
+    
+    return Optional.ofNullable(DSL.using(getConnection())
+    .select()
+    .from(DSL.table(Tables.NODE_SUBSCRIPTIONS.name()))
+    .where(DSL.field("ID").eq(id))
+    .fetchOne()
+    .into(NodeSubscription.class));
   }
 }

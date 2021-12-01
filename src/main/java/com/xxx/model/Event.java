@@ -1,6 +1,7 @@
 package com.xxx.model;
 
 import java.sql.Timestamp;
+import java.util.Date;
 import java.util.UUID;
 
 public class Event {
@@ -8,7 +9,7 @@ public class Event {
   private String id = UUID.randomUUID().toString();
   private String subscriptionId;
   private String message;
-  private Timestamp created;
+  private Timestamp created = new Timestamp(new Date().getTime());
 
   public String getId() {
     return id;
@@ -40,5 +41,23 @@ public class Event {
 
   public void setCreated(Timestamp created) {
     this.created = created;
+  }
+
+  @Override
+  public String toString() {
+    
+    StringBuilder builder = new StringBuilder();
+    
+    builder.append("Event [id=")
+    .append(id)
+    .append(", subscriptionId=")
+    .append(subscriptionId)
+    .append(", message=")
+    .append(message)
+    .append(", created=")
+    .append(created)
+    .append("]");
+    
+    return builder.toString();
   }
 }

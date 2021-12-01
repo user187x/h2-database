@@ -1,14 +1,15 @@
 package com.xxx.model;
 
 import java.sql.Timestamp;
+import java.util.Date;
 import java.util.UUID;
 
 public class Node {
 
   private String id = UUID.randomUUID().toString();
-  private boolean healthy;
-  private Timestamp lastSeen;
-  private Timestamp created;
+  private boolean healthy = true;
+  private Timestamp lastSeen = new Timestamp(new Date().getTime());
+  private Timestamp created = new Timestamp(new Date().getTime());
 
   public String getId() {
     return id;

@@ -4,11 +4,11 @@ import java.sql.Timestamp;
 import java.util.Date;
 import java.util.UUID;
 
-public class NodeSubscription {
+public class UndeliveredEvent {
 
   private String id = UUID.randomUUID().toString();
-  private String subscriptionId;
   private String nodeId;
+  private String eventId;
   private Timestamp created = new Timestamp(new Date().getTime());
 
   public String getId() {
@@ -19,14 +19,6 @@ public class NodeSubscription {
     this.id = id;
   }
 
-  public String getSubscriptionId() {
-    return subscriptionId;
-  }
-
-  public void setSubscriptionId(String subscriptionId) {
-    this.subscriptionId = subscriptionId;
-  }
-
   public String getNodeId() {
     return nodeId;
   }
@@ -35,11 +27,23 @@ public class NodeSubscription {
     this.nodeId = nodeId;
   }
 
+  public String getEventId() {
+    return eventId;
+  }
+
+  public void setEventId(String eventId) {
+    this.eventId = eventId;
+  }
+
   public Timestamp getCreated() {
     return created;
   }
 
   public void setCreated(Timestamp created) {
     this.created = created;
+  }
+  
+  public void setCreated() {
+    this.created = new Timestamp(new Date().getTime());
   }
 }

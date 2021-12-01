@@ -1,13 +1,14 @@
 package com.xxx.model;
 
 import java.sql.Timestamp;
+import java.util.Date;
 import java.util.UUID;
 
 public class Subscription {
 
   private String id = UUID.randomUUID().toString();
   private String topic;
-  private Timestamp created;
+  private Timestamp created = new Timestamp(new Date().getTime());
 
   public String getId() {
     return id;
