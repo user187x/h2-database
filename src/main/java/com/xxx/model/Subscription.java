@@ -7,8 +7,16 @@ import java.util.UUID;
 public class Subscription {
 
   private String id = UUID.randomUUID().toString();
+  private String channel;
   private String topic;
   private Timestamp created = new Timestamp(new Date().getTime());
+
+  public Subscription() {}
+
+  public Subscription(String channel, String topic) {
+    this.channel = channel;
+    this.topic = topic;
+  }
 
   public String getId() {
     return id;
@@ -16,6 +24,14 @@ public class Subscription {
 
   public void setId(String id) {
     this.id = id;
+  }
+
+  public String getChannel() {
+    return channel;
+  }
+
+  public void setChannel(String channel) {
+    this.channel = channel;
   }
 
   public String getTopic() {

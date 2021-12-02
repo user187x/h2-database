@@ -3,6 +3,7 @@ package com.xxx.model;
 import java.sql.Timestamp;
 import java.util.Date;
 import java.util.UUID;
+import com.google.gson.JsonObject;
 
 public class Event {
 
@@ -59,5 +60,17 @@ public class Event {
     .append("]");
     
     return builder.toString();
+  }
+  
+  public JsonObject toJson() {
+    
+    JsonObject json = new JsonObject();
+    
+    json.addProperty("id", id);
+    json.addProperty("subscriptionId", subscriptionId);
+    json.addProperty("message", message);
+    json.addProperty("created", created.toString());
+    
+    return json;
   }
 }

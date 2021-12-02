@@ -1,11 +1,16 @@
 package com.xxx;
 
-import java.sql.SQLException;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 
+@SpringBootApplication
+@EnableAutoConfiguration(exclude={DataSourceAutoConfiguration.class})
 public class App {
 
-  public static void main(String[] args) throws SQLException {
-    
-    System.out.println("Hello world");
+  public static void main(String[] args) {
+
+    SpringApplication.run(App.class, args);
   }
 }

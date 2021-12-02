@@ -11,6 +11,13 @@ public class NodeSubscription {
   private String nodeId;
   private Timestamp created = new Timestamp(new Date().getTime());
 
+  public NodeSubscription() {}
+  
+  public NodeSubscription(Node node, Subscription subscription) {
+    this.nodeId = node.getId();
+    this.subscriptionId = subscription.getId();
+  }
+  
   public String getId() {
     return id;
   }

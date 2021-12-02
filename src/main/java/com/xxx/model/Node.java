@@ -3,6 +3,7 @@ package com.xxx.model;
 import java.sql.Timestamp;
 import java.util.Date;
 import java.util.UUID;
+import com.google.gson.JsonObject;
 
 public class Node {
 
@@ -11,6 +12,12 @@ public class Node {
   private Timestamp lastSeen = new Timestamp(new Date().getTime());
   private Timestamp created = new Timestamp(new Date().getTime());
 
+  public Node() {}
+  
+  public Node(String id) {
+    this.id = id;
+  }
+  
   public String getId() {
     return id;
   }
@@ -41,5 +48,17 @@ public class Node {
 
   public void setCreated(Timestamp created) {
     this.created = created;
+  }
+
+  public JsonObject toJson() {
+    
+    JsonObject json = new JsonObject();
+    
+    json.addProperty("id", id);
+    json.addProperty("healthy", healthy);
+    json.addProperty("lastSeen", lastSeen.toString());
+    json.addProperty("created", created.toString());
+    
+    return json;
   }
 }

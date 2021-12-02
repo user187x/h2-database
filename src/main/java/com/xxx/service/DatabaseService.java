@@ -11,6 +11,8 @@ import com.xxx.model.Node;
 import com.xxx.model.NodeSubscription;
 import com.xxx.model.Subscription;
 import com.xxx.model.UndeliveredEvent;
+import com.xxx.util.SQLUtil;
+import com.xxx.util.SQLUtil.Tables;
 
 public class DatabaseService {
 
@@ -18,22 +20,23 @@ public class DatabaseService {
   
   private Connection connection;
 
-  public DatabaseService() {
-
+  public DatabaseService() {}
+  
+  public boolean initialize() {
+ 
     try {
-
-      connection = DriverManager.getConnection("jdbc:h2:mem:");
       
-      TableCreator.createNodeTable(connection);
-      TableCreator.createSubscriptionTable(connection);
-      TableCreator.createNodeSubscriptionTable(connection);
-      TableCreator.createEventTable(connection);
-      TableCreator.createUndeliveredEventsTable(connection);
-    } 
-    catch (Exception e) {
-
-      logger.severe("Failure setting up database connection " + e.getMessage());
+      connection = DriverManager.getConnection("jdbc:h2:mem:");
+      SQLUtil.ensureTables(connection);
+      
+      return true;
     }
+    catch(Exception e) {
+     
+      logger.severe("Failure setting up database connection " + e.getMessage());
+      return false;
+    }
+
   }
   
   public Connection getConnection() {
@@ -54,6 +57,28 @@ public class DatabaseService {
       List<Node> nodeList = list.get();
       
       if(nodeList.isEmpty())
+        return false;
+      else
+        return true;
+    }
+    
+    return false;
+  }
+  
+  public boolean subscriptionExists(String channel, String topic) {
+    
+    Optional<List<Subscription>> list = Optional.ofNullable(DSL.using(getConnection())
+    .select()
+    .from(DSL.table(Tables.SUBSCRIPTIONS.name()))
+    .where(DSL.field("TOPIC").eq(topic).and(DSL.field("CHANNEL").eq(channel)))
+    .fetch()
+    .into(Subscription.class));
+    
+    if(list.isPresent()) {
+      
+      List<Subscription> subscriptionList = list.get();
+      
+      if(subscriptionList.isEmpty())
         return false;
       else
         return true;
@@ -106,6 +131,28 @@ public class DatabaseService {
     return false;
   }
   
+  public boolean nodeSubscriptionExists(String nodeId, String subscriptionId) {
+    
+    Optional<List<Subscription>> list = Optional.ofNullable(DSL.using(getConnection())
+    .select()
+    .from(DSL.table(Tables.NODE_SUBSCRIPTIONS.name()))
+    .where(DSL.field("NODE_ID").eq(nodeId).and(DSL.field("SUBSCRIPTION_ID").eq(subscriptionId)))
+    .fetch()
+    .into(Subscription.class));
+    
+    if(list.isPresent()) {
+      
+      List<Subscription> nodeList = list.get();
+      
+      if(nodeList.isEmpty())
+        return false;
+      else
+        return true;
+    }
+    
+    return false;
+  }
+  
   public boolean nodeSubscriptionExists(Node node, Subscription subscription) {
     
     Optional<List<NodeSubscription>> nodeSubscription = Optional.ofNullable(DSL.using(getConnection())
@@ -141,6 +188,18 @@ public class DatabaseService {
     return success;
   }
   
+  public boolean deleteNode(Node node) {
+    
+    boolean success = Optional.ofNullable(DSL.using(getConnection())
+    .delete(DSL.table(Tables.NODES.name()))
+    .where(DSL.field("ID").eq(node.getId()))
+    .execute())
+    .map(count -> count == 1)
+    .get();
+    
+    return success;
+  }
+  
   public boolean saveEvent(Event event) {
     
     boolean success = Optional.ofNullable(DSL.using(getConnection())
@@ -156,8 +215,16 @@ public class DatabaseService {
   public boolean saveSubscription(Subscription subscription) {
     
     boolean success = Optional.ofNullable(DSL.using(getConnection())
-    .insertInto(DSL.table(Tables.SUBSCRIPTIONS.name()), DSL.field("ID"), DSL.field("TOPIC"), DSL.field("CREATED"))
-    .values(subscription.getId(), subscription.getTopic(), subscription.getCreated())
+    .insertInto(DSL.table(Tables.SUBSCRIPTIONS.name()), 
+        DSL.field("ID"),
+        DSL.field("TOPIC"), 
+        DSL.field("CHANNEL"),
+        DSL.field("CREATED"))
+    .values(
+        subscription.getId(), 
+        subscription.getTopic(),
+        subscription.getChannel(),
+        subscription.getCreated())
     .execute())
     .map(count -> count == 1)
     .get();
@@ -285,6 +352,19 @@ public class DatabaseService {
     .where(DSL.field("NODE_SUBSCRIPTIONS.NODE_ID").eq(node.getId()))
     .fetch()
     .into(Subscription.class);
+    
+    return subscriptions;
+  }
+  
+  public List<Node> getSubscribedNodes(Subscription subscription) {
+    
+    List<Node> subscriptions = DSL.using(getConnection())
+    .select()
+    .from(DSL.table(Tables.NODE_SUBSCRIPTIONS.name())).join(Tables.NODES.name())
+      .on(DSL.field("NODE_SUBSCRIPTIONS.NODE_ID").eq(DSL.field("NODES.ID")))
+    .where(DSL.field("NODE_SUBSCRIPTIONS.SUBSCRIPTION_ID").eq(subscription.getId()))
+    .fetch()
+    .into(Node.class);
     
     return subscriptions;
   }

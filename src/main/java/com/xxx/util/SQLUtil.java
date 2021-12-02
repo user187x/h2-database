@@ -1,12 +1,36 @@
-package com.xxx.service;
+package com.xxx.util;
 
 import java.sql.Connection;
 import java.util.Optional;
+import java.util.logging.Logger;
 import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
 
-public class TableCreator {
+public class SQLUtil {
+  
+  private static final Logger logger = Logger.getLogger(SQLUtil.class.getSimpleName());
+  
+  public static enum Tables {EVENTS, NODES, NODE_SUBSCRIPTIONS, SUBSCRIPTIONS, UNDELIVERED_EVENTS}
+  
+  public static boolean ensureTables(Connection connection) {
+    
+    try {
 
+      SQLUtil.createNodeTable(connection);
+      SQLUtil.createSubscriptionTable(connection);
+      SQLUtil.createNodeSubscriptionTable(connection);
+      SQLUtil.createEventTable(connection);
+      SQLUtil.createUndeliveredEventsTable(connection);
+    } 
+    catch (Exception e) {
+
+      logger.warning("Failure creating tables " + e.getMessage());
+      return false;
+    }
+    
+    return true;
+  }
+  
   public static boolean createEventTable(Connection connection) {
     
     boolean success = Optional.ofNullable(DSL.using(connection)
@@ -93,6 +117,7 @@ public class TableCreator {
     .createTableIfNotExists(Tables.SUBSCRIPTIONS.name())
     .column("ID", SQLDataType.VARCHAR(256).nullable(false))
     .column("TOPIC", SQLDataType.VARCHAR(256).nullable(false))
+    .column("CHANNEL", SQLDataType.VARCHAR(256).nullable(false))
     .column("CREATED", SQLDataType.TIMESTAMP.nullable(false))
     .constraints(
       DSL.primaryKey("ID"),
