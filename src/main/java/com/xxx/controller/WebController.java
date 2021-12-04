@@ -134,7 +134,7 @@ public class WebController {
     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build(); 
   }
   
-  @RequestMapping(value = "/getEvents/{nodeId}", method = RequestMethod.GET)
+  @RequestMapping(value = "/getEvents/{nodeId}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<String> getUndeliverdEvents(@PathVariable String nodeId) {
     
     Node node = new Node(nodeId);
@@ -156,7 +156,7 @@ public class WebController {
     return ResponseEntity.status(HttpStatus.OK).body(gson.toJson(payload));
   }
   
-  @RequestMapping(value = "/getSubscriptions/{nodeId}", method = RequestMethod.GET)
+  @RequestMapping(value = "/getSubscriptions/{nodeId}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<String> getSubscriptions(@PathVariable String nodeId) {
     
     Optional<Node> node = databaseService.getNodeById(nodeId);
@@ -170,19 +170,24 @@ public class WebController {
     
     for(NodeSubscription nodeSubscription : nodeSubscriptions) {
       
-      Optional<Subscription> optional = databaseService.getSubscriptionById(nodeSubscription.getId());
+      Optional<NodeSubscription> optional = databaseService.getNodeSubscription(nodeSubscription.getId());
       
       if(optional.isPresent()) {
         
-        Subscription subscription = optional.get();
+        Optional<Subscription> oSubscription = databaseService.getSubscriptionById(optional.get().getSubscriptionId());
         
-        JsonObject json = new JsonObject();
-        json.addProperty("subscriptionId", subscription.getId());
-        json.addProperty("channel", subscription.getChannel());
-        json.addProperty("topic", subscription.getTopic());
-        json.addProperty("subscribed-since", nodeSubscription.getCreated().toString());
+        if(oSubscription.isPresent()) {
         
-        payload.add(json);
+          Subscription subscription = oSubscription.get();
+          
+          JsonObject json = new JsonObject();
+          json.addProperty("subscriptionId", subscription.getId());
+          json.addProperty("channel", subscription.getChannel());
+          json.addProperty("topic", subscription.getTopic());
+          json.addProperty("subscribed-since", nodeSubscription.getCreated().toString());
+          
+          payload.add(json);
+        }
       }
     }
 

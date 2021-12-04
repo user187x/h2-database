@@ -508,34 +508,52 @@ public class DatabaseService {
   
   public Optional<Subscription> getSubscriptionById(String id) {
     
-    return Optional.ofNullable(DSL.using(getConnection())
-    .select()
-    .from(DSL.table(Tables.SUBSCRIPTIONS.name()))
-    .where(DSL.field("ID").eq(id))
-    .fetchOne()
-    .into(Subscription.class));
+    try {
+    
+      return Optional.ofNullable(DSL.using(getConnection())
+      .select()
+      .from(DSL.table(Tables.SUBSCRIPTIONS.name()))
+      .where(DSL.field("ID").eq(id))
+      .fetchOne()
+      .into(Subscription.class));
+    }
+    catch(Exception e) {
+      
+      return Optional.empty();
+    }
   }
   
   public List<Subscription> getSubscriptions() {
     
-    List<Subscription> subscriptions = DSL.using(getConnection())
+    try {
+    
+    return DSL.using(getConnection())
     .select()
     .from(DSL.table(Tables.SUBSCRIPTIONS.name()))
     .fetch()
     .into(Subscription.class);
     
-    return subscriptions;
+    }
+    catch(Exception e){
+      
+      return null;
+    }
   }
   
   public List<UndeliveredEvent> getUndeliveredEvents() {
     
-    List<UndeliveredEvent> undeliveredEvents = DSL.using(getConnection())
-    .select()
-    .from(DSL.table(Tables.UNDELIVERED_EVENTS.name()))
-    .fetch()
-    .into(UndeliveredEvent.class);
+    try {
     
-    return undeliveredEvents;
+      return DSL.using(getConnection())
+      .select()
+      .from(DSL.table(Tables.UNDELIVERED_EVENTS.name()))
+      .fetch()
+      .into(UndeliveredEvent.class);
+    }
+    catch(Exception e) {
+      
+      return null;
+    }
   }
   
   public Optional<UndeliveredEvent> getUndeliveredEvent(Node node, Event event) {
