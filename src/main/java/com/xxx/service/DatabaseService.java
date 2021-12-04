@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.logging.Logger;
 import org.jooq.impl.DSL;
+import org.jooq.impl.SQLDataType;
 import com.xxx.model.Event;
 import com.xxx.model.Node;
 import com.xxx.model.NodeSubscription;
@@ -179,8 +180,21 @@ public class DatabaseService {
   public boolean saveNode(Node node) {
     
     boolean success = Optional.ofNullable(DSL.using(getConnection())
-    .insertInto(DSL.table(Tables.NODES.name()), DSL.field("ID"), DSL.field("HEALTHY"), DSL.field("LAST_SEEN"), DSL.field("CREATED"))
-    .values(node.getId(), node.isHealthy(), node.getLastSeen(), node.getCreated())
+    .insertInto(DSL.table(Tables.NODES.name()), DSL.field("ID"), DSL.field("NAME"), DSL.field("LAST_SEEN"), DSL.field("CREATED"))
+    .values(node.getId(), node.getName(), node.getLastSeen(), node.getCreated())
+    .execute())
+    .map(count -> count == 1)
+    .get();
+    
+    return success;
+  }
+  
+  public boolean updateNode(Node node) {
+    
+    boolean success = Optional.ofNullable(DSL.using(getConnection())
+    .update(DSL.table(Tables.NODES.name()))
+    .set(DSL.field("NAME", SQLDataType.VARCHAR), node.getName())
+    .set(DSL.field("LAST_SEEN", SQLDataType.TIMESTAMP), DSL.currentTimestamp())
     .execute())
     .map(count -> count == 1)
     .get();
@@ -232,11 +246,35 @@ public class DatabaseService {
     return success;
   }
   
+  public boolean deleteSubscription(Subscription subscription) {
+    
+    boolean success = Optional.ofNullable(DSL.using(getConnection())
+    .delete(DSL.table(Tables.SUBSCRIPTIONS.name()))
+    .where(DSL.field("ID").eq(subscription.getId()))
+    .execute())
+    .map(count -> count == 1)
+    .get();
+    
+    return success;
+  }
+  
   public boolean saveNodeSubscription(NodeSubscription nodeSubscription) {
     
     boolean success = Optional.ofNullable(DSL.using(getConnection())
     .insertInto(DSL.table(Tables.NODE_SUBSCRIPTIONS.name()), DSL.field("ID"), DSL.field("SUBSCRIPTION_ID"), DSL.field("NODE_ID"), DSL.field("CREATED"))
     .values(nodeSubscription.getId(), nodeSubscription.getSubscriptionId(), nodeSubscription.getNodeId(), nodeSubscription.getCreated())
+    .execute())
+    .map(count -> count == 1)
+    .get();
+    
+    return success;
+  }
+  
+  public boolean deleteNodeSubscription(NodeSubscription nodeSubscription) {
+    
+    boolean success = Optional.ofNullable(DSL.using(getConnection())
+    .delete(DSL.table(Tables.NODE_SUBSCRIPTIONS.name()))
+    .where(DSL.field("ID").eq(nodeSubscription.getId()))
     .execute())
     .map(count -> count == 1)
     .get();
@@ -268,13 +306,11 @@ public class DatabaseService {
   
   public List<Node> getNodes() {
     
-    List<Node> nodes = DSL.using(getConnection())
+    return DSL.using(getConnection())
     .select()
     .from(DSL.table(Tables.NODES.name()))
     .fetch()
     .into(Node.class);
-    
-    return nodes;
   }
   
   public Optional<Event> getEventById(String id) {
@@ -393,12 +429,32 @@ public class DatabaseService {
     return success;
   }
   
-  public Optional<NodeSubscription> getNodeSubscriptionById(String id) {
+  public boolean removeNodeSubscription(Node node, Subscription subscription) {
+    
+    Optional<NodeSubscription> nodeSubscription = getNodeSubscription(node.getId(), subscription.getId());    
+          
+    if(nodeSubscription.isEmpty())
+      return true;
+    
+    return deleteNodeSubscription(nodeSubscription.get());
+  }
+  
+  public Optional<NodeSubscription> getNodeSubscription(String nodeSubscriptionId) {
     
     return Optional.ofNullable(DSL.using(getConnection())
     .select()
     .from(DSL.table(Tables.NODE_SUBSCRIPTIONS.name()))
-    .where(DSL.field("ID").eq(id))
+    .where(DSL.field("ID").eq(nodeSubscriptionId))
+    .fetchOne()
+    .into(NodeSubscription.class));
+  }
+  
+  public Optional<NodeSubscription> getNodeSubscription(String nodeId, String subscriptionId) {
+    
+    return Optional.ofNullable(DSL.using(getConnection())
+    .select()
+    .from(DSL.table(Tables.NODE_SUBSCRIPTIONS.name()))
+    .where(DSL.field("NODE_ID").eq(nodeId).and(DSL.field("SUBSCRIPTION_ID").eq(subscriptionId)))
     .fetchOne()
     .into(NodeSubscription.class));
   }

@@ -77,7 +77,7 @@ public class SQLUtil {
     boolean success = Optional.ofNullable(DSL.using(connection)
     .createTableIfNotExists(Tables.NODES.name())
     .column("ID", SQLDataType.VARCHAR(256).nullable(false))
-    .column("HEALTHY", SQLDataType.BOOLEAN.nullable(false))
+    .column("NAME", SQLDataType.BOOLEAN.nullable(false))
     .column("LAST_SEEN", SQLDataType.TIMESTAMP.nullable(false))
     .column("CREATED", SQLDataType.TIMESTAMP.nullable(false))
     .constraints(

@@ -13,6 +13,11 @@ public class NodeSubscription {
 
   public NodeSubscription() {}
   
+  public NodeSubscription(String nodeId, String subscriptionId) {
+    this.nodeId = nodeId;
+    this.subscriptionId = subscriptionId;
+  }
+  
   public NodeSubscription(Node node, Subscription subscription) {
     this.nodeId = node.getId();
     this.subscriptionId = subscription.getId();

@@ -3,21 +3,15 @@ package com.xxx.model;
 import java.sql.Timestamp;
 import java.util.Date;
 import java.util.UUID;
-import com.google.gson.JsonObject;
 
-public class Node {
+public class NodeHealth {
 
   private String id = UUID.randomUUID().toString();
-  private String name = null;
+  private boolean healthy = true;
+  private int attemptCount = 0;
   private Timestamp lastSeen = new Timestamp(new Date().getTime());
   private Timestamp created = new Timestamp(new Date().getTime());
 
-  public Node() {}
-  
-  public Node(String id) {
-    this.id = id;
-  }
-  
   public String getId() {
     return id;
   }
@@ -26,12 +20,20 @@ public class Node {
     this.id = id;
   }
 
-  public String getName() {
-    return name;
+  public boolean isHealthy() {
+    return healthy;
   }
 
-  public void setName(String name) {
-    this.name = name;
+  public void setHealthy(boolean healthy) {
+    this.healthy = healthy;
+  }
+
+  public int getAttemptCount() {
+    return attemptCount;
+  }
+
+  public void setAttemptCount(int attemptCount) {
+    this.attemptCount = attemptCount;
   }
 
   public Timestamp getLastSeen() {
@@ -49,16 +51,8 @@ public class Node {
   public void setCreated(Timestamp created) {
     this.created = created;
   }
-
-  public JsonObject toJson() {
-    
-    JsonObject json = new JsonObject();
-    
-    json.addProperty("id", id);
-    json.addProperty("name", name);
-    json.addProperty("lastSeen", lastSeen.toString());
-    json.addProperty("created", created.toString());
-    
-    return json;
+  
+  public void incrementAttempts() {
+    this.attemptCount++;
   }
 }

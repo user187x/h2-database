@@ -36,6 +36,7 @@ public class DatabaseServiceTest {
     
     Node node = new Node();
     node.setId(nodeId);
+    node.setName("xxx");
     databaseService.saveNode(node);
     
     NodeSubscription nodeSubscription = new NodeSubscription();
