@@ -19,14 +19,17 @@ public class DatabaseServiceTest {
   private String nodeId = "12345";
   private String message = "Hello World";
   private String topic = "beatles";
+  private String channel = "bbc";
   
   @Before
   public void setUp() {
     
     databaseService = new DatabaseService();
+    databaseService.initialize();
     
     Subscription subscription = new Subscription();
     subscription.setTopic(topic);
+    subscription.setChannel(channel);
     databaseService.saveSubscription(subscription);
     
     Event event = new Event();
@@ -73,10 +76,11 @@ public class DatabaseServiceTest {
     Subscription subscription = subscriptions.iterator().next();
     Assert.assertEquals(topic, subscription.getTopic());
     
-    Subscription newSubscription = new Subscription();
-    newSubscription.setTopic("dogs");
+    Subscription dogSubscription = new Subscription();
+    dogSubscription.setTopic("dogs");
+    dogSubscription.setChannel("animalPlanet");
     
-    databaseService.addSubscription(node, newSubscription);
+    databaseService.addSubscription(node, dogSubscription);
     subscriptions = databaseService.getSubscriptions(node);
     Assert.assertEquals(2, subscriptions.size());
   }
