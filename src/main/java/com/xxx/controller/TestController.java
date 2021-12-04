@@ -33,9 +33,8 @@ public class TestController {
 
     //Create a subscription
     Subscription subscription = new Subscription();
-    subscription.setId("beatles");
-    subscription.setTopic("johnLennon");
-    subscription.setChannel("bbc");
+    subscription.setTopic("TheBeatles");
+    subscription.setChannel("JohnLennon");
     
     databaseService.saveSubscription(subscription);
     

@@ -162,7 +162,7 @@ public class WebController {
     Optional<Node> node = databaseService.getNodeById(nodeId);
     
     if(node.isEmpty())
-      return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Node doesn't exist");
+      return ResponseEntity.status(HttpStatus.NOT_FOUND).body("{}");
     
     List<NodeSubscription> nodeSubscriptions = databaseService.getNodeSubscriptions(node.get());
     

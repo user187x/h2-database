@@ -191,7 +191,8 @@ public class DatabaseService {
     Optional<List<Subscription>> list = Optional.ofNullable(DSL.using(getConnection())
     .select()
     .from(DSL.table(Tables.NODE_SUBSCRIPTIONS.name()))
-    .where(DSL.field("ID").eq(nodeSubscription.getId()))
+    .where(DSL.field("ID").eq(nodeSubscription.getId())
+    .or(DSL.field("NODE_ID").eq(nodeSubscription.getNodeId()).and(DSL.field("SUBSCRIPTION_ID").eq(nodeSubscription.getSubscriptionId()))))
     .fetch()
     .into(Subscription.class));
     
@@ -461,12 +462,19 @@ public class DatabaseService {
 
   public Optional<Node> getNodeById(String id) {
     
-    return Optional.ofNullable(DSL.using(getConnection())
-    .select()
-    .from(DSL.table(Tables.NODES.name()))
-    .where(DSL.field("ID").eq(id))
-    .fetchOne()
-    .into(Node.class));
+    try {
+    
+      return Optional.ofNullable(DSL.using(getConnection())
+      .select()
+      .from(DSL.table(Tables.NODES.name()))
+      .where(DSL.field("ID").eq(id))
+      .fetchOne()
+      .into(Node.class));
+    }
+    catch(Exception e) {
+      
+      return Optional.empty();
+    }
   }
   
   public List<Node> getNodes() {
