@@ -1,7 +1,11 @@
 package com.xxx.service;
 
 import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
+import java.util.stream.IntStream;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -17,9 +21,11 @@ public class DatabaseServiceTest {
   private DatabaseService databaseService;
   
   private String nodeId = "12345";
-  private String message = "Hello World";
-  private String topic = "beatles";
+  private String message = "Mic check";
+  private String topic = "john-lennon";
   private String channel = "bbc";
+  
+  private String subscriptionId = "beatles";
   
   @Before
   public void setUp() {
@@ -28,6 +34,7 @@ public class DatabaseServiceTest {
     databaseService.initialize();
     
     Subscription subscription = new Subscription();
+    subscription.setId(subscriptionId);
     subscription.setTopic(topic);
     subscription.setChannel(channel);
     databaseService.saveSubscription(subscription);
@@ -61,7 +68,7 @@ public class DatabaseServiceTest {
   }
   
   @Test
-  public void testEndToEnd() {
+  public void entToEndTest() {
     
     Node node = databaseService.getNodes().iterator().next();
     Assert.assertEquals(nodeId, node.getId());
@@ -83,5 +90,38 @@ public class DatabaseServiceTest {
     databaseService.addSubscription(node, dogSubscription);
     subscriptions = databaseService.getSubscriptions(node);
     Assert.assertEquals(2, subscriptions.size());
+  }
+  
+  @Test
+  public void eventExpirationTest() {
+    
+    Timestamp fourDaysAgo = Timestamp.from(Instant.now().minus(Duration.ofDays(4)));
+    
+    IntStream.range(0, 5).forEach(i -> {
+      
+      Event event = new Event();
+      event.setMessage("Hello World [" + i + "]");
+      event.setSubscriptionId(subscriptionId);
+      event.setCreated(fourDaysAgo);
+      
+      databaseService.saveEvent(event);
+    });
+    
+    Node node = databaseService.getNodeById(nodeId).get();
+    
+    System.out.println("Node subscriptions for " + node.getName());
+    List<Subscription> subscriptions = databaseService.getSubscriptions(node);
+    
+    subscriptions.stream().forEach(s -> System.out.println(s.getTopic()));
+    
+    Subscription subscription = databaseService.getSubscriptionById(subscriptionId).get();
+    System.out.println("Events for subscription " + subscription.getTopic());
+    
+    List<Event> events = databaseService.getSubscriptionEvents(subscriptionId);
+    events.stream().forEach(e -> System.out.println(e.getMessage()));
+    Assert.assertEquals(6, events.size());
+    
+    List<Event> expiredEvents = databaseService.getExpiredEvents();
+    Assert.assertEquals(5, expiredEvents.size());
   }
 }

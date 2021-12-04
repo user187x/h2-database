@@ -2,6 +2,9 @@ package com.xxx.service;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.logging.Logger;
@@ -180,8 +183,16 @@ public class DatabaseService {
   public boolean saveNode(Node node) {
     
     boolean success = Optional.ofNullable(DSL.using(getConnection())
-    .insertInto(DSL.table(Tables.NODES.name()), DSL.field("ID"), DSL.field("NAME"), DSL.field("LAST_SEEN"), DSL.field("CREATED"))
-    .values(node.getId(), node.getName(), node.getLastSeen(), node.getCreated())
+    .insertInto(DSL.table(Tables.NODES.name()), 
+        DSL.field("ID"), 
+        DSL.field("NAME"), 
+        DSL.field("LAST_SEEN"), 
+        DSL.field("CREATED"))
+    .values(
+        node.getId(), 
+        node.getName(), 
+        node.getLastSeen(), 
+        node.getCreated())
     .execute())
     .map(count -> count == 1)
     .get();
@@ -217,8 +228,16 @@ public class DatabaseService {
   public boolean saveEvent(Event event) {
     
     boolean success = Optional.ofNullable(DSL.using(getConnection())
-    .insertInto(DSL.table(Tables.EVENTS.name()), DSL.field("ID"), DSL.field("SUBSCRIPTION_ID"), DSL.field("MESSAGE"), DSL.field("CREATED"))
-    .values(event.getId(), event.getSubscriptionId(), event.getMessage(), event.getCreated())
+    .insertInto(DSL.table(Tables.EVENTS.name()), 
+        DSL.field("ID"), 
+        DSL.field("SUBSCRIPTION_ID"), 
+        DSL.field("MESSAGE"), 
+        DSL.field("CREATED"))
+    .values(
+        event.getId(), 
+        event.getSubscriptionId(), 
+        event.getMessage(), 
+        event.getCreated())
     .execute())
     .map(count -> count == 1)
     .get();
@@ -261,8 +280,16 @@ public class DatabaseService {
   public boolean saveNodeSubscription(NodeSubscription nodeSubscription) {
     
     boolean success = Optional.ofNullable(DSL.using(getConnection())
-    .insertInto(DSL.table(Tables.NODE_SUBSCRIPTIONS.name()), DSL.field("ID"), DSL.field("SUBSCRIPTION_ID"), DSL.field("NODE_ID"), DSL.field("CREATED"))
-    .values(nodeSubscription.getId(), nodeSubscription.getSubscriptionId(), nodeSubscription.getNodeId(), nodeSubscription.getCreated())
+    .insertInto(DSL.table(Tables.NODE_SUBSCRIPTIONS.name()), 
+        DSL.field("ID"), 
+        DSL.field("SUBSCRIPTION_ID"), 
+        DSL.field("NODE_ID"), 
+        DSL.field("CREATED"))
+    .values(
+        nodeSubscription.getId(), 
+        nodeSubscription.getSubscriptionId(), 
+        nodeSubscription.getNodeId(), 
+        nodeSubscription.getCreated())
     .execute())
     .map(count -> count == 1)
     .get();
@@ -285,8 +312,16 @@ public class DatabaseService {
   public boolean saveUndeliveredEvent(UndeliveredEvent undeliveredEvent) {
     
     boolean success = Optional.ofNullable(DSL.using(getConnection())
-    .insertInto(DSL.table(Tables.UNDELIVERED_EVENTS.name()), DSL.field("ID"), DSL.field("EVENT_ID"), DSL.field("NODE_ID"), DSL.field("CREATED"))
-    .values(undeliveredEvent.getId(), undeliveredEvent.getEventId(), undeliveredEvent.getNodeId(), undeliveredEvent.getCreated())
+    .insertInto(DSL.table(Tables.UNDELIVERED_EVENTS.name()), 
+        DSL.field("ID"), 
+        DSL.field("EVENT_ID"), 
+        DSL.field("NODE_ID"), 
+        DSL.field("CREATED"))
+    .values(
+        undeliveredEvent.getId(), 
+        undeliveredEvent.getEventId(), 
+        undeliveredEvent.getNodeId(), 
+        undeliveredEvent.getCreated())
     .execute())
     .map(count -> count == 1)
     .get();
@@ -420,8 +455,16 @@ public class DatabaseService {
       saveSubscription(subscription);
     
     boolean success = Optional.ofNullable(DSL.using(getConnection())
-    .insertInto(DSL.table(Tables.NODE_SUBSCRIPTIONS.name()), DSL.field("ID"), DSL.field("NODE_ID"), DSL.field("SUBSCRIPTION_ID"), DSL.field("CREATED"))
-    .values(nodeSubscription.getId(), nodeSubscription.getNodeId(), nodeSubscription.getSubscriptionId(), nodeSubscription.getCreated())
+    .insertInto(DSL.table(Tables.NODE_SUBSCRIPTIONS.name()), 
+        DSL.field("ID"),
+        DSL.field("NODE_ID"), 
+        DSL.field("SUBSCRIPTION_ID"), 
+        DSL.field("CREATED"))
+    .values(
+        nodeSubscription.getId(), 
+        nodeSubscription.getNodeId(), 
+        nodeSubscription.getSubscriptionId(), 
+        nodeSubscription.getCreated())
     .execute())
     .map(count -> count == 1)
     .get();
@@ -480,5 +523,30 @@ public class DatabaseService {
     .into(NodeSubscription.class);
     
     return nodeSubscriptions;
+  }
+
+  public List<Event> getSubscriptionEvents(String subscriptionId) {
+    
+    List<Event> events = DSL.using(getConnection())
+    .select()
+    .from(DSL.table(Tables.EVENTS.name())).join(Tables.SUBSCRIPTIONS.name())
+      .on(DSL.field("EVENTS.SUBSCRIPTION_ID").eq(DSL.field("SUBSCRIPTIONS.ID")))
+    .where(DSL.field("EVENTS.SUBSCRIPTION_ID").eq(subscriptionId))
+    .fetch()
+    .into(Event.class);
+    
+    return events;
+  }
+  
+  public List<Event> getExpiredEvents() {
+    
+    Date oneDay = Date.from(Instant.now().minus(Duration.ofDays(1)));
+    
+    return DSL.using(getConnection())
+    .select()
+    .from(DSL.table(Tables.EVENTS.name()))
+    .where(DSL.field("CREATED").le(oneDay))
+    .fetch()
+    .into(Event.class);
   }
 }
