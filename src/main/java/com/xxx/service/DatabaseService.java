@@ -30,6 +30,8 @@ public class DatabaseService {
  
     try {
       
+      System.getProperties().setProperty("org.jooq.no-logo", "true");
+      
       connection = DriverManager.getConnection("jdbc:h2:mem:");
       SQLUtil.ensureTables(connection);
       
@@ -311,6 +313,11 @@ public class DatabaseService {
   
   public boolean saveUndeliveredEvent(UndeliveredEvent undeliveredEvent) {
     
+    Optional<UndeliveredEvent> ude = getUndeliveredEvent(undeliveredEvent.getNodeId(), undeliveredEvent.getEventId());
+    
+    if(ude.isPresent())
+      return true;
+    
     boolean success = Optional.ofNullable(DSL.using(getConnection())
     .insertInto(DSL.table(Tables.UNDELIVERED_EVENTS.name()), 
         DSL.field("ID"), 
@@ -328,7 +335,7 @@ public class DatabaseService {
     
     return success;
   }
-  
+
   public Optional<Node> getNodeById(String id) {
     
     return Optional.ofNullable(DSL.using(getConnection())
@@ -399,6 +406,33 @@ public class DatabaseService {
     .into(UndeliveredEvent.class);
     
     return undeliveredEvents;
+  }
+  
+  public Optional<UndeliveredEvent> getUndeliveredEvent(Node node, Event event) {
+    
+    Optional<UndeliveredEvent> undeliveredEvent = Optional.ofNullable(DSL.using(getConnection())
+    .select()
+    .from(DSL.table(Tables.UNDELIVERED_EVENTS.name()))
+    .where(DSL.field("NODE_ID").eq(node.getId()).and(DSL.field("EVENT_ID").eq(event.getId())))
+    .fetchOne()
+    .into(UndeliveredEvent.class));
+    
+    return undeliveredEvent;
+  }
+  
+  public Optional<UndeliveredEvent> getUndeliveredEvent(String nodeId, String eventId) {
+    
+    Optional<List<UndeliveredEvent>> optional = Optional.ofNullable(DSL.using(getConnection())
+    .select()
+    .from(DSL.table(Tables.UNDELIVERED_EVENTS.name()))
+    .where(DSL.field("NODE_ID").eq(nodeId).and(DSL.field("EVENT_ID").eq(eventId)))
+    .fetch()
+    .into(UndeliveredEvent.class));
+    
+    if(optional.isPresent() && !optional.get().isEmpty())
+      return Optional.of(optional.get().iterator().next());
+    else
+      return Optional.empty();
   }
   
   public List<Event> getUndeliveredEvents(Node node) {
@@ -548,5 +582,20 @@ public class DatabaseService {
     .where(DSL.field("CREATED").le(oneDay))
     .fetch()
     .into(Event.class);
+  }
+
+  public boolean updateEvent(String eventId, Event event) {
+    
+    boolean success = Optional.ofNullable(DSL.using(getConnection())
+    .update(DSL.table(Tables.EVENTS.name()))
+    .set(DSL.field("ID", SQLDataType.VARCHAR), eventId)
+    .set(DSL.field("CREATED", SQLDataType.TIMESTAMP), event.getCreated())
+    .set(DSL.field("MESSAGE", SQLDataType.VARCHAR), event.getMessage())
+    .set(DSL.field("SUBSCRIPTION_ID", SQLDataType.VARCHAR), event.getSubscriptionId())
+    .execute())
+    .map(count -> count == 1)
+    .get();
+    
+    return success;
   }
 }

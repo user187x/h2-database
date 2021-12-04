@@ -32,10 +32,11 @@ public class WebController {
   @Autowired
   private EventManager eventManager;
   
-  @RequestMapping(value = "/createNode/{id}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<String> createNode(@PathVariable String id) {
+  @RequestMapping(value = "/createNode/{name}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<String> createNode(@PathVariable String name) {
     
-    Node node = new Node(id);
+    Node node = new Node();
+    node.setName(name);
     
     if(databaseService.nodeExists(node))
       return ResponseEntity.status(HttpStatus.OK).body(node.toString());
@@ -43,7 +44,7 @@ public class WebController {
     boolean success = databaseService.saveNode(node);
     
     if(success)
-      return ResponseEntity.status(HttpStatus.OK).body(node.toString());
+      return ResponseEntity.status(HttpStatus.OK).body(node.toJson().toString());
     else
       return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
   }
@@ -158,12 +159,12 @@ public class WebController {
   @RequestMapping(value = "/getSubscriptions/{nodeId}", method = RequestMethod.GET)
   public ResponseEntity<String> getSubscriptions(@PathVariable String nodeId) {
     
-    Node node = new Node(nodeId);
+    Optional<Node> node = databaseService.getNodeById(nodeId);
     
-    if(!databaseService.nodeExists(node))
+    if(node.isEmpty())
       return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Node doesn't exist");
     
-    List<NodeSubscription> nodeSubscriptions = databaseService.getNodeSubscriptions(node);
+    List<NodeSubscription> nodeSubscriptions = databaseService.getNodeSubscriptions(node.get());
     
     JsonArray payload = new JsonArray();
     
