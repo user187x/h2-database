@@ -75,6 +75,7 @@ public class DatabaseService {
       initURL();
       
       System.getProperties().setProperty("org.jooq.no-logo", "true");
+      System.getProperties().setProperty("org.jooq.no-tips", "true");
       
       if(inMemory)
         connection = DriverManager.getConnection("jdbc:h2:mem:");
@@ -131,6 +132,28 @@ public class DatabaseService {
     if(list.isPresent()) {
       
       List<Subscription> subscriptionList = list.get();
+      
+      if(subscriptionList.isEmpty())
+        return false;
+      else
+        return true;
+    }
+    
+    return false;
+  }
+  
+  public boolean eventExists(Event event) {
+    
+    Optional<List<Event>> list = Optional.ofNullable(DSL.using(getConnection())
+    .select()
+    .from(DSL.table(Tables.EVENTS.name()))
+    .where(DSL.field("ID").eq(event.getId()))
+    .fetch()
+    .into(Event.class));
+    
+    if(list.isPresent()) {
+      
+      List<Event> subscriptionList = list.get();
       
       if(subscriptionList.isEmpty())
         return false;
@@ -232,6 +255,9 @@ public class DatabaseService {
   
   public boolean saveNode(Node node) {
     
+    if(nodeExists(node))
+      return true;
+    
     boolean success = Optional.ofNullable(DSL.using(getConnection())
     .insertInto(DSL.table(Tables.NODES.name()), 
         DSL.field("ID"), 
@@ -277,6 +303,9 @@ public class DatabaseService {
   
   public boolean saveEvent(Event event) {
     
+    if(eventExists(event))
+      return true;
+    
     boolean success = Optional.ofNullable(DSL.using(getConnection())
     .insertInto(DSL.table(Tables.EVENTS.name()), 
         DSL.field("ID"), 
@@ -296,6 +325,9 @@ public class DatabaseService {
   }
   
   public boolean saveSubscription(Subscription subscription) {
+    
+    if(subscriptionExists(subscription))
+      return true;
     
     boolean success = Optional.ofNullable(DSL.using(getConnection())
     .insertInto(DSL.table(Tables.SUBSCRIPTIONS.name()), 
@@ -329,6 +361,9 @@ public class DatabaseService {
   
   public boolean saveNodeSubscription(NodeSubscription nodeSubscription) {
     
+    if(nodeSubscriptionExists(nodeSubscription))
+      return true;
+    
     boolean success = Optional.ofNullable(DSL.using(getConnection())
     .insertInto(DSL.table(Tables.NODE_SUBSCRIPTIONS.name()), 
         DSL.field("ID"), 
@@ -361,10 +396,29 @@ public class DatabaseService {
   
   public boolean saveUndeliveredEvent(UndeliveredEvent undeliveredEvent) {
     
+    if(undeliveredEventExists(undeliveredEvent))
+      return true;
+    
     Optional<UndeliveredEvent> ude = getUndeliveredEvent(undeliveredEvent.getNodeId(), undeliveredEvent.getEventId());
     
     if(ude.isPresent())
       return true;
+    
+    Optional<Event> event = getEventById(undeliveredEvent.getEventId());
+    
+    if(event.isEmpty()) {
+      
+      logger.warning("Attempt to save undelivered event failed -> Subscription doesn't exists");
+      return false;
+    }
+    
+    Optional<Node> node = getNodeById(undeliveredEvent.getNodeId());
+    
+    if(node.isEmpty()) {
+      
+      logger.warning("Attempt to save undelivered event failed -> Node doesn't exists");
+      return false;
+    }
     
     boolean success = Optional.ofNullable(DSL.using(getConnection())
     .insertInto(DSL.table(Tables.UNDELIVERED_EVENTS.name()), 
@@ -382,6 +436,27 @@ public class DatabaseService {
     .get();
     
     return success;
+  }
+
+  private boolean undeliveredEventExists(UndeliveredEvent undeliveredEvent) {
+    
+    Optional<List<UndeliveredEvent>> nodeSubscription = Optional.ofNullable(DSL.using(getConnection())
+    .select()
+    .from(DSL.table(Tables.UNDELIVERED_EVENTS.name()))
+    .where(DSL.field("ID").eq(undeliveredEvent.getId()).or(DSL.field("NODE_ID").eq(undeliveredEvent.getNodeId())
+        .and(DSL.field("EVENT_ID").eq(undeliveredEvent.getEventId()))))
+    .fetch()
+    .into(UndeliveredEvent.class));
+    
+    if(nodeSubscription.isPresent()) {
+      
+      if(nodeSubscription.get().isEmpty())
+        return false;
+      else
+        return true;
+    }
+      
+    return false;
   }
 
   public Optional<Node> getNodeById(String id) {
@@ -405,12 +480,19 @@ public class DatabaseService {
   
   public Optional<Event> getEventById(String id) {
     
-    return Optional.ofNullable(DSL.using(getConnection())
-    .select()
-    .from(DSL.table(Tables.EVENTS.name()))
-    .where(DSL.field("ID").eq(id))
-    .fetchOne()
-    .into(Event.class));
+    try {
+    
+      return Optional.ofNullable(DSL.using(getConnection())
+      .select()
+      .from(DSL.table(Tables.EVENTS.name()))
+      .where(DSL.field("ID").eq(id))
+      .fetchOne()
+      .into(Event.class));
+    }
+    catch(Exception e) {
+      
+      return Optional.empty();
+    }
   }
   
   public List<Event> getEvents() {
@@ -609,15 +691,14 @@ public class DatabaseService {
 
   public List<Event> getSubscriptionEvents(String subscriptionId) {
     
-    List<Event> events = DSL.using(getConnection())
+    return DSL.using(getConnection())
     .select()
-    .from(DSL.table(Tables.EVENTS.name())).join(Tables.SUBSCRIPTIONS.name())
-      .on(DSL.field("EVENTS.SUBSCRIPTION_ID").eq(DSL.field("SUBSCRIPTIONS.ID")))
+    .from(DSL.table(Tables.SUBSCRIPTIONS.name()))
+    .join(Tables.EVENTS.name())  
+    .on(DSL.field("EVENTS.SUBSCRIPTION_ID").eq(DSL.field("SUBSCRIPTIONS.ID")))
     .where(DSL.field("EVENTS.SUBSCRIPTION_ID").eq(subscriptionId))
     .fetch()
     .into(Event.class);
-    
-    return events;
   }
   
   public List<Event> getExpiredEvents() {
@@ -636,10 +717,10 @@ public class DatabaseService {
     
     boolean success = Optional.ofNullable(DSL.using(getConnection())
     .update(DSL.table(Tables.EVENTS.name()))
-    .set(DSL.field("ID", SQLDataType.VARCHAR), eventId)
     .set(DSL.field("CREATED", SQLDataType.TIMESTAMP), event.getCreated())
     .set(DSL.field("MESSAGE", SQLDataType.VARCHAR), event.getMessage())
     .set(DSL.field("SUBSCRIPTION_ID", SQLDataType.VARCHAR), event.getSubscriptionId())
+    .where(DSL.field("ID").eq(eventId))
     .execute())
     .map(count -> count == 1)
     .get();

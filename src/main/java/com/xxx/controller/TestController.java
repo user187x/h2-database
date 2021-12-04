@@ -81,7 +81,7 @@ public class TestController {
     beBeUndeliveredEvents.forEach(event -> {
     
       //pick a random node from the result set
-      int randomNum = ThreadLocalRandom.current().nextInt(0, nodes.size() + 1);
+      int randomNum = ThreadLocalRandom.current().nextInt(0, nodes.size());
       Node node = nodes.get(randomNum);
       
       //create an associated undelivered event
@@ -104,8 +104,9 @@ public class TestController {
       
       //re-adjust the created time so it can be considered expired
       event.setCreated(Timestamp.from(Instant.now().minus(Duration.ofDays(4))));
+      String eventId = event.getId();
       
-      databaseService.updateEvent(event.getId(), event);
+      databaseService.updateEvent(eventId, event);
     });
     
     return ResponseEntity.status(HttpStatus.OK).body("test data inserted");
