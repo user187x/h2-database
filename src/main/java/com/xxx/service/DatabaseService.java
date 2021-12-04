@@ -8,6 +8,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.logging.Logger;
+import org.apache.commons.lang3.StringUtils;
 import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
 import com.xxx.model.Event;
@@ -23,16 +24,63 @@ public class DatabaseService {
   private static final Logger logger = Logger.getLogger(DatabaseService.class.getSimpleName());
   
   private Connection connection;
-
+  private boolean inMemory = true;
+  
+  private String databasePath = "jdbc:h2:file:";
+  
+  private String user;
+  private String password;
+  
   public DatabaseService() {}
+
+  public String getUser() {
+    return user;
+  }
+
+  public void setUser(String user) {
+    this.user = user;
+  }
+
+  public String getPassword() {
+    return password;
+  }
+
+  public void setPassword(String password) {
+    this.password = password;
+  }
+
+  public void setDatabasePath(String path) {
+    
+    if(StringUtils.isNoneBlank(path)) {
+      
+      this.databasePath = databasePath.concat(path);
+      this.inMemory = false;
+    }
+  }
+  
+  private void initURL() {
+    
+    if(!inMemory) {
+      
+      if(StringUtils.isNoneBlank(password)) { 
+        this.databasePath = databasePath.concat(";" + "USER=" + getUser() + ";" + "PASSWORD=" + getPassword());
+      }
+    }
+  }
   
   public boolean initialize() {
  
     try {
       
+      initURL();
+      
       System.getProperties().setProperty("org.jooq.no-logo", "true");
       
-      connection = DriverManager.getConnection("jdbc:h2:mem:");
+      if(inMemory)
+        connection = DriverManager.getConnection("jdbc:h2:mem:");
+      else
+        connection = DriverManager.getConnection(databasePath);
+      
       SQLUtil.ensureTables(connection);
       
       return true;

@@ -64,7 +64,7 @@ public class DatabaseServiceTest {
   public void cleanUp() throws SQLException {
     
     //DEBUG GUI
-    //Server.startWebServer(databaseService.getConnection());
+    //org.h2.tools.Server.startWebServer(databaseService.getConnection());
   }
   
   @Test
