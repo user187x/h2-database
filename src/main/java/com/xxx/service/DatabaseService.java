@@ -715,8 +715,9 @@ public class DatabaseService {
     
     List<Event> undeliveredEvents = DSL.using(getConnection())
     .select()
-    .from(DSL.table(Tables.UNDELIVERED_EVENTS.name())).join(Tables.EVENTS.name())
-      .on(DSL.field("UNDELIVERED_EVENTS.EVENT_ID").eq(DSL.field("EVENTS.ID")))
+    .from(DSL.table(Tables.UNDELIVERED_EVENTS.name()))
+    .join(Tables.EVENTS.name())
+    .on(DSL.field("UNDELIVERED_EVENTS.EVENT_ID").eq(DSL.field("EVENTS.ID")))
     .where(DSL.field("NODE_ID").eq(node.getId()))
     .fetch()
     .into(Event.class);
@@ -728,8 +729,9 @@ public class DatabaseService {
     
     List<Subscription> subscriptions = DSL.using(getConnection())
     .select()
-    .from(DSL.table(Tables.NODE_SUBSCRIPTIONS.name())).join(Tables.SUBSCRIPTIONS.name())
-      .on(DSL.field("NODE_SUBSCRIPTIONS.SUBSCRIPTION_ID").eq(DSL.field("SUBSCRIPTIONS.ID")))
+    .from(DSL.table(Tables.NODE_SUBSCRIPTIONS.name()))
+    .join(Tables.SUBSCRIPTIONS.name())  
+    .on(DSL.field("NODE_SUBSCRIPTIONS.SUBSCRIPTION_ID").eq(DSL.field("SUBSCRIPTIONS.ID")))
     .where(DSL.field("NODE_SUBSCRIPTIONS.NODE_ID").eq(node.getId()))
     .fetch()
     .into(Subscription.class);
@@ -741,8 +743,9 @@ public class DatabaseService {
     
     List<Node> subscriptions = DSL.using(getConnection())
     .select()
-    .from(DSL.table(Tables.NODE_SUBSCRIPTIONS.name())).join(Tables.NODES.name())
-      .on(DSL.field("NODE_SUBSCRIPTIONS.NODE_ID").eq(DSL.field("NODES.ID")))
+    .from(DSL.table(Tables.NODE_SUBSCRIPTIONS.name()))
+    .join(Tables.NODES.name())  
+    .on(DSL.field("NODE_SUBSCRIPTIONS.NODE_ID").eq(DSL.field("NODES.ID")))
     .where(DSL.field("NODE_SUBSCRIPTIONS.SUBSCRIPTION_ID").eq(subscription.getId()))
     .fetch()
     .into(Node.class);
@@ -821,6 +824,22 @@ public class DatabaseService {
     .into(NodeSubscription.class);
     
     return nodeSubscriptions;
+  }
+  
+  //TODO test this
+  public List<Subscription> getNonSubscribedSubscriptions() {
+    
+    List<Subscription> subscriptions = DSL.using(getConnection())
+    .select()
+    .from(DSL.table(Tables.SUBSCRIPTIONS.name()))
+    .where(DSL.field("ID")
+        .notIn(DSL.select(DSL.field("SUBSCRIPTION_ID"))
+        .from(DSL.table(Tables.NODE_SUBSCRIPTIONS.name())))
+    )
+    .fetch()
+    .into(Subscription.class);
+    
+    return subscriptions;
   }
   
   public List<NodeSubscription> getNodeSubscriptions(String nodeId) {

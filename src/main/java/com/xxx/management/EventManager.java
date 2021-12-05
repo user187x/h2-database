@@ -53,11 +53,24 @@ public class EventManager {
     }
   }
   
-  @Scheduled(fixedDelay = 1000)
+  @Scheduled(fixedDelay = 30000)
   public void cleanUpNonSubscribedTopic() {
     
-    logger.info("Purging non-subscribed subscriptions");
+    logger.info("Looking for non-subscribed subscriptions to purge");
     
-    //TODO
+    List<Subscription> nonSubscribedSubcriptions = databaseService.getNonSubscribedSubscriptions();
+    
+    for(Subscription subscription : nonSubscribedSubcriptions) {
+      
+      boolean success = databaseService.deleteSubscription(subscription);
+      
+      String topic = subscription.getTopic();
+      String channel = subscription.getChannel();
+      
+      if(success)
+        logger.info("Purged subscription [" + subscription.getId() + "] -> No subscribers for [" + channel + " <-> " + topic + "]");
+      else
+        logger.warning("Subscription purge failed");
+    }
   }
 }

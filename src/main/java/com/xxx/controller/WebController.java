@@ -264,7 +264,7 @@ public class WebController {
   }
   
   @RequestMapping(value = "/createSubscription/{channel}/{topic}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<String> create(@PathVariable String channel, @PathVariable String topic) {
+  public ResponseEntity<String> createSubscription(@PathVariable String channel, @PathVariable String topic) {
     
     Optional<Subscription> oSubscription = databaseService.getSubscription(topic, channel);
     
