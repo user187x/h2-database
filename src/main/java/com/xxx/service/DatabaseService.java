@@ -10,6 +10,7 @@ import java.util.Optional;
 import java.util.logging.Logger;
 import org.apache.commons.lang3.StringUtils;
 import org.h2.tools.Server;
+import org.jooq.Condition;
 import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
 import com.xxx.model.Event;
@@ -149,10 +150,39 @@ public class DatabaseService {
   
   public boolean nodeExists(Node node) {
     
+    Condition condition = null;
+    
+    if(StringUtils.isBlank(node.getName()))
+      condition = DSL.field("ID").eq(node.getId());
+    else
+      condition = DSL.field("NAME").eq(node.getName());
+    
     Optional<List<Node>> list = Optional.ofNullable(DSL.using(getConnection())
     .select()
     .from(DSL.table(Tables.NODES.name()))
-    .where(DSL.field("ID").eq(node.getId()))
+    .where(condition)
+    .fetch()
+    .into(Node.class));
+    
+    if(list.isPresent()) {
+      
+      List<Node> nodeList = list.get();
+      
+      if(nodeList.isEmpty())
+        return false;
+      else
+        return true;
+    }
+    
+    return false;
+  }
+  
+  public boolean nodeExists(String id) {
+    
+    Optional<List<Node>> list = Optional.ofNullable(DSL.using(getConnection())
+    .select()
+    .from(DSL.table(Tables.NODES.name()))
+    .where(DSL.field("ID").eq(id))
     .fetch()
     .into(Node.class));
     
@@ -175,6 +205,28 @@ public class DatabaseService {
     .select()
     .from(DSL.table(Tables.SUBSCRIPTIONS.name()))
     .where(DSL.field("TOPIC").eq(topic).and(DSL.field("CHANNEL").eq(channel)))
+    .fetch()
+    .into(Subscription.class));
+    
+    if(list.isPresent()) {
+      
+      List<Subscription> subscriptionList = list.get();
+      
+      if(subscriptionList.isEmpty())
+        return false;
+      else
+        return true;
+    }
+    
+    return false;
+  }
+  
+  public boolean subscriptionExists(String subcriptionId) {
+    
+    Optional<List<Subscription>> list = Optional.ofNullable(DSL.using(getConnection())
+    .select()
+    .from(DSL.table(Tables.SUBSCRIPTIONS.name()))
+    .where(DSL.field("ID").eq(subcriptionId))
     .fetch()
     .into(Subscription.class));
     

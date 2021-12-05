@@ -64,6 +64,21 @@ public class WebController {
     return ResponseEntity.status(HttpStatus.OK).body(gson.toJson(payload));
   }
   
+  @RequestMapping(value = "/listSubscriptions", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<String> listSubscriptions() {
+    
+    List<Subscription> subscriptions = databaseService.getSubscriptions();
+    
+    JsonArray payload = new JsonArray();
+    
+    for(Subscription subscription : subscriptions)
+      payload.add(subscription.toJson());
+
+    Gson gson = new GsonBuilder().setPrettyPrinting().create();
+    
+    return ResponseEntity.status(HttpStatus.OK).body(gson.toJson(payload));
+  }
+  
   @RequestMapping(value = "/deleteNode/{id}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<String> deleteNode(@PathVariable String id) {
     
@@ -75,40 +90,85 @@ public class WebController {
       return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
   }
   
-  @RequestMapping(value = "/addSubscription/{nodeId}/{channel}/{topic}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<String> addSubscription(@PathVariable String nodeId, @PathVariable String channel, @PathVariable String topic) {
+  @RequestMapping(value = "/addSubscription/{nodeId}/{subcriptionId}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<String> addSubscription(@PathVariable String nodeId, @PathVariable String subcriptionId) {
     
-    Subscription subscription = new Subscription();
-    subscription.setTopic(topic);
-    subscription.setChannel(channel);
+    boolean exists = databaseService.subscriptionExists(subcriptionId);
     
-    boolean exists = databaseService.subscriptionExists(subscription);
+    if(!exists) {
+      
+      JsonObject response = new JsonObject();
+      response.addProperty("success", false);
+      response.addProperty("message", "Subscription doesnt exist");
+      
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response.toString());
+    }
     
-    if(!exists)
-      databaseService.saveSubscription(subscription);
-    
-    Node node = new Node(nodeId);
-    
-    exists = databaseService.nodeExists(node);
+    exists = databaseService.nodeExists(nodeId);
 
-    if(!exists)
-      databaseService.saveNode(node);
+    if(!exists) {
+      
+      JsonObject response = new JsonObject();
+      response.addProperty("success", false);
+      response.addProperty("message", "Node doesnt exist");
+      
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response.toString());
+    }
+    
+    Node node = databaseService.getNodeById(nodeId).get();
+    Subscription subscription = databaseService.getSubscriptionById(subcriptionId).get();
     
     NodeSubscription nodeSubscription = new NodeSubscription(node, subscription);
     
     exists = databaseService.nodeSubscriptionExists(node.getId(), subscription.getId());
     
-    if(!exists)
-      databaseService.saveNodeSubscription(nodeSubscription);
+    if(!exists) {
+      
+      boolean success = databaseService.saveNodeSubscription(nodeSubscription);
+      
+      if(success) {
+        
+        JsonObject response = new JsonObject();
+        response.addProperty("success", true);
+        response.addProperty("message", "Node doesnt exist");
+        
+        return ResponseEntity.status(HttpStatus.OK).build();
+      }
+      else {
+        
+        JsonObject response = new JsonObject();
+        response.addProperty("success", false);
+        response.addProperty("message", "failure saving Node-Subscription");
+        
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response.toString());
+      }
+    }
+    
+    JsonObject response = new JsonObject();
+    response.addProperty("success", true);
+    response.addProperty("message", "Node-Subscription already exists");
     
     return ResponseEntity.status(HttpStatus.OK).build();
   }
   
-  @RequestMapping(value = "/createEvent/{channel}/{topic}/", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+  @RequestMapping(value = "/createEvent/{channel}/{topic}", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<String> createEvent(@PathVariable String channel, @PathVariable String topic, @RequestBody String body) {
     
-    JsonObject payload = JsonParser.parseString(body).getAsJsonObject();
-    String message = payload.get("message").getAsString();
+    String message;
+    
+    try {
+      
+      JsonObject payload = JsonParser.parseString(body).getAsJsonObject();
+      message = payload.get("message").getAsString();
+    }
+    catch(Exception e) {
+      
+      JsonObject response = new JsonObject();
+      response.addProperty("success", false);
+      response.addProperty("message", "failure parsing 'message'");
+      
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response.toString());
+    }
     
     Subscription subscription = new Subscription();
     subscription.setChannel(channel);
@@ -128,10 +188,19 @@ public class WebController {
     if(eventSaveSuccess) {
       
       eventManager.broadCastEvent(event);
-      return ResponseEntity.status(HttpStatus.OK).body(payload.toString());
+      
+      JsonObject response = new JsonObject();
+      response.addProperty("success", true);
+      response.addProperty("message", message);
+      
+      return ResponseEntity.status(HttpStatus.OK).body(response.toString());
     }
     
-    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build(); 
+    JsonObject response = new JsonObject();
+    response.addProperty("success", false);
+    response.addProperty("message", "failure saving message");
+    
+    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response.toString()); 
   }
   
   @RequestMapping(value = "/getEvents/{nodeId}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
