@@ -405,6 +405,18 @@ public class DatabaseService {
     return success;
   }
   
+  public boolean deleteEvent(Event event) {
+    
+    boolean success = Optional.ofNullable(DSL.using(getConnection())
+    .delete(DSL.table(Tables.EVENTS.name()))
+    .where(DSL.field("ID").eq(event.getId()))
+    .execute())
+    .map(count -> count == 1)
+    .get();
+    
+    return success;
+  }
+  
   public boolean saveEvent(Event event) {
     
     if(eventExists(event))
@@ -866,6 +878,18 @@ public class DatabaseService {
     .into(Event.class);
   }
   
+  public List<Event> getSubscriptionEvents(Subscription subscription) {
+    
+    return DSL.using(getConnection())
+    .select()
+    .from(DSL.table(Tables.SUBSCRIPTIONS.name()))
+    .join(Tables.EVENTS.name())  
+    .on(DSL.field("EVENTS.SUBSCRIPTION_ID").eq(DSL.field("SUBSCRIPTIONS.ID")))
+    .where(DSL.field("EVENTS.SUBSCRIPTION_ID").eq(subscription.getId()))
+    .fetch()
+    .into(Event.class);
+  }
+  
   public List<Event> getExpiredEvents() {
     
     Date oneDay = Date.from(Instant.now().minus(Duration.ofDays(1)));
@@ -891,5 +915,29 @@ public class DatabaseService {
     .get();
     
     return success;
+  }
+
+  public boolean deleteUndeliveredEvent(UndeliveredEvent undeliveredEvent) {
+    
+    boolean success = Optional.ofNullable(DSL.using(getConnection())
+    .delete(DSL.table(Tables.UNDELIVERED_EVENTS.name()))
+    .where(DSL.field("ID").eq(undeliveredEvent.getId()))
+    .execute())
+    .map(count -> count == 1)
+    .get();
+    
+    return success;
+  }
+
+  public List<UndeliveredEvent> getUndeliveredEvents(Event event) {
+
+    List<UndeliveredEvent> undeliveredEvents = DSL.using(getConnection())
+    .select()
+    .from(DSL.table(Tables.UNDELIVERED_EVENTS.name()))
+    .where(DSL.field("EVENT_ID").eq(event.getId()))
+    .fetch()
+    .into(UndeliveredEvent.class);
+    
+    return undeliveredEvents;
   }
 }

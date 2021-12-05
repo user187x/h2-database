@@ -62,15 +62,49 @@ public class EventManager {
     
     for(Subscription subscription : nonSubscribedSubcriptions) {
       
-      boolean success = databaseService.deleteSubscription(subscription);
-      
-      String topic = subscription.getTopic();
-      String channel = subscription.getChannel();
-      
-      if(success)
+      if(databaseService.deleteSubscription(subscription)) {
+        
+        String topic = subscription.getTopic();
+        String channel = subscription.getChannel();
+        
         logger.info("Purged subscription [" + subscription.getId() + "] -> No subscribers for [" + channel + " <-> " + topic + "]");
-      else
-        logger.warning("Subscription purge failed");
+        
+        //Clean up any event under this subscription
+        List<Event> deadEvents = databaseService.getSubscriptionEvents(subscription);
+        
+        if(deadEvents != null && !deadEvents.isEmpty()) {
+          
+          logger.info("Purging [" + deadEvents.size() + "] dead events");
+          
+          for(Event event : deadEvents) {
+            
+            logger.info("Flushing any undelivered events for [" + event.getId() + "]");
+            List<UndeliveredEvent> undeliveredEvents = databaseService.getUndeliveredEvents(event);
+            
+            boolean allUndeliveredDeleteSuccess = true;
+            
+            for (UndeliveredEvent undeliveredEvent : undeliveredEvents) {
+
+              if (databaseService.deleteUndeliveredEvent(undeliveredEvent))
+                logger.info("Undelivered event [" + undeliveredEvent.getId() + "] purged");
+              else
+                allUndeliveredDeleteSuccess = false;
+            }
+            
+            if (allUndeliveredDeleteSuccess) {
+
+              boolean eventDeleteSuccess = databaseService.deleteEvent(event);
+
+              if (eventDeleteSuccess) {
+                logger.info("Event [" + event.getId() + "] purged");
+              }
+            }
+          }
+        }
+      }
+      else {
+        logger.warning("Non-subscribed subscription failed to be purged -> " + subscription.getId());
+      }
     }
   }
 }
