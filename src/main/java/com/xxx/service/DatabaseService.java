@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.logging.Logger;
 import org.apache.commons.lang3.StringUtils;
+import org.h2.tools.Server;
 import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
 import com.xxx.model.Event;
@@ -23,6 +24,9 @@ public class DatabaseService {
 
   private static final Logger logger = Logger.getLogger(DatabaseService.class.getSimpleName());
   
+  private boolean dbGuiActive = false;
+  private Server server = null;
+  
   private Connection connection;
   private boolean inMemory = true;
   
@@ -30,6 +34,7 @@ public class DatabaseService {
   
   private String user;
   private String password;
+  private Integer guiPort = 8888;
   
   public DatabaseService() {}
 
@@ -57,30 +62,74 @@ public class DatabaseService {
       this.inMemory = false;
     }
   }
+
+  public void setDatabaseGuiPort(int port) {
+    this.guiPort = port;
+  }
+
+  public Integer getDatbaseGuiPort() {
+    return guiPort;
+  }
   
-  private void initURL() {
+  public Server getDbServer() {
+    return server;
+  }
+  
+  public void startGUIServer() {
     
-    if(!inMemory) {
+   try {
+     
+     server = Server.createWebServer("-web", "-webAllowOthers", "-webPort", guiPort.toString());
+     server.start();
+     
+     this.dbGuiActive = true;
+     
+     logger.info("Database GUI has been activated");
+   }
+   catch(Exception e) {
+    
+     logger.warning("Failure starting H2 GUI -> " + e.getMessage());
+   }
+  }
+  
+  public void stopGUIServer() {
+    
+    if(server !=null && server.isRunning(true)) {
       
-      if(StringUtils.isNoneBlank(password)) { 
-        this.databasePath = databasePath.concat(";" + "USER=" + getUser() + ";" + "PASSWORD=" + getPassword());
-      }
+      server.stop();
+      this.dbGuiActive = false;
+      
+      logger.info("Database GUI has been deactivated");
     }
   }
   
+  public boolean isGuiActive() {
+    return dbGuiActive;
+  }
+  
+  public String getDatabasePath() {
+    return databasePath;
+  }
+
   public boolean initialize() {
  
     try {
       
-      initURL();
-      
       System.getProperties().setProperty("org.jooq.no-logo", "true");
       System.getProperties().setProperty("org.jooq.no-tips", "true");
-      
-      if(inMemory)
-        connection = DriverManager.getConnection("jdbc:h2:mem:");
-      else
+ 
+      if(!inMemory) {
+        
+        if(StringUtils.isNoneBlank(password)) { 
+          this.databasePath = databasePath.concat(";" + "USER=" + getUser() + ";" + "PASSWORD=" + getPassword());
+          
+          connection = DriverManager.getConnection(databasePath);
+        }
+      }
+      else {
+        
         connection = DriverManager.getConnection(databasePath);
+      }
       
       SQLUtil.ensureTables(connection);
       

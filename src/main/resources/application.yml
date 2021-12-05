@@ -1,5 +1,11 @@
 server:
   port: 8083
+database:
+  user: xxx
+  password: xxx
+  inmemory: false
+  path: "C:/Users/xxx/Desktop/h2-database"
+  gui-port: 8888
 spring:
   main:
     banner-mode: "off"

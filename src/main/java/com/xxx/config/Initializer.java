@@ -1,10 +1,8 @@
 package com.xxx.config;
 
-import java.sql.SQLException;
 import java.util.logging.Logger;
-import javax.annotation.PostConstruct;
-import org.h2.tools.Server;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -19,14 +17,27 @@ public class Initializer {
   @Autowired
   private ApplicationContext context;
   
+  @Value("${database.path}")
+  private String dbpath;
+  
+  @Value("${database.gui-port}")
+  private int guiPort;
+  
+  @Value("${database.user}")
+  private String user;
+  
+  @Value("${database.password}")
+  private String password;
+  
   @Bean
   public DatabaseService databaseService() {
     
     DatabaseService databaseService = new DatabaseService();
     
-    databaseService.setDatabasePath("C:/Users/xxx/Desktop/h2-database");
-    databaseService.setUser("xxx");
-    databaseService.setPassword("xxx");
+    databaseService.setDatabasePath(dbpath);
+    databaseService.setUser(user);
+    databaseService.setDatabaseGuiPort(guiPort);
+    databaseService.setPassword(password);
     
     if(!databaseService.initialize()) {
       
@@ -37,23 +48,5 @@ public class Initializer {
     }
     
     return databaseService;
-  }
-  
-  @PostConstruct
-  public void startH2GUI() {
-    
-    try {
-      
-      Integer webPort = 8888;
-      
-      Server server = Server.createWebServer("-web", "-webAllowOthers", "-webPort", webPort.toString());
-      server.start();
-      
-      logger.info("Started H2 Database UI at http://localhost:" + webPort);
-    } 
-    catch (SQLException e) {
-      
-      logger.warning("Failure starting H2 GUI -> " + e.getMessage());
-    }
   }
 }
