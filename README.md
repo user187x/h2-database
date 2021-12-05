@@ -1,4 +1,4 @@
-[![CI](h2/src/docsrc/images/h2-logo-2.png)](https://github.com/h2database/h2database/actions?query=workflow%3ACI)
+![h2](https://github.com/h2database/h2database/actions?query=workflow%3ACI)
 # Sub-pub system written in Java using H2
 
 ## The main features of H2 are:
