@@ -1,10 +1,12 @@
 package com.xxx.management;
 
+import java.util.List;
 import java.util.logging.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import com.xxx.model.NodeHealth;
 import com.xxx.service.DatabaseService;
 
 @Component
@@ -23,6 +25,6 @@ public class NodeManager {
   @Scheduled(fixedDelay = 30000)
   public void checkUnhealthyNodes() {
   
-    
+    List<NodeHealth> unhealthyNodes = databaseService.getUnhealthyNodes();
   }
 }
