@@ -21,6 +21,7 @@ import com.xxx.model.Event;
 import com.xxx.model.Node;
 import com.xxx.model.NodeSubscription;
 import com.xxx.model.Subscription;
+import com.xxx.model.UndeliveredEvent;
 import com.xxx.service.DatabaseService;
 
 @RestController
@@ -73,6 +74,65 @@ public class WebController {
     
     for(Subscription subscription : subscriptions)
       payload.add(subscription.toJson());
+
+    Gson gson = new GsonBuilder().setPrettyPrinting().create();
+    
+    return ResponseEntity.status(HttpStatus.OK).body(gson.toJson(payload));
+  }
+  
+  @RequestMapping(value = {"/listNodeSubscriptions", "/listNodeSubscriptions/{nodeId}"}, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<String> listNodeSubscriptions(@PathVariable Optional<String> nodeId) {
+    
+    List<NodeSubscription> nodeSubscriptions;
+    
+    if(nodeId.isEmpty())
+      nodeSubscriptions = databaseService.getNodeSubscriptions();
+    else {
+      
+      boolean nodeExists = databaseService.nodeExists(nodeId.get());
+      
+      if(!nodeExists) {
+        
+        JsonObject response = new JsonObject();
+        response.addProperty("success", false);
+        response.addProperty("message", "Node doesn't exist");
+        
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response.toString());
+      }
+      
+      nodeSubscriptions = databaseService.getNodeSubscriptions(nodeId.get());
+    }
+    
+    JsonArray payload = new JsonArray();
+    
+    for(NodeSubscription nodeSubscription : nodeSubscriptions) {
+      
+      JsonObject json = nodeSubscription.toJson();
+      
+      Node node = databaseService.getNodeById(nodeSubscription.getNodeId()).get();
+      Subscription subscription = databaseService.getSubscriptionById(nodeSubscription.getSubscriptionId()).get();
+      
+      json.addProperty("node-name", node.getName());
+      json.addProperty("subscription-topic", subscription.getTopic());
+      json.addProperty("subscription-channel", subscription.getChannel());
+      
+      payload.add(json);
+    }
+
+    Gson gson = new GsonBuilder().setPrettyPrinting().create();
+    
+    return ResponseEntity.status(HttpStatus.OK).body(gson.toJson(payload));
+  }
+  
+  @RequestMapping(value = "/listUndeliveredEvents", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<String> listUndeliveredEvents() {
+    
+    List<UndeliveredEvent> undeliveredEvents = databaseService.getUndeliveredEvents();
+    
+    JsonArray payload = new JsonArray();
+    
+    for(UndeliveredEvent undeliveredEvent : undeliveredEvents)
+      payload.add(undeliveredEvent.toJson());
 
     Gson gson = new GsonBuilder().setPrettyPrinting().create();
     
@@ -203,8 +263,74 @@ public class WebController {
     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response.toString()); 
   }
   
-  @RequestMapping(value = "/getEvents/{nodeId}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<String> getUndeliverdEvents(@PathVariable String nodeId) {
+  @RequestMapping(value = "/createSubscription/{channel}/{topic}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<String> create(@PathVariable String channel, @PathVariable String topic) {
+    
+    Optional<Subscription> oSubscription = databaseService.getSubscription(topic, channel);
+    
+    if(oSubscription.isPresent()) {
+      
+      JsonObject response = new JsonObject();
+      response.addProperty("success", true);
+      response.addProperty("subscriptionId", oSubscription.get().getId());
+      response.addProperty("message", "Subscription already exists");
+      
+      return ResponseEntity.status(HttpStatus.OK).body(response.toString());
+    }
+    
+    Subscription subscription = new Subscription();
+    subscription.setChannel(channel);
+    subscription.setTopic(topic);
+    
+    boolean success = databaseService.saveSubscription(subscription);
+    
+    if(success) {
+      
+      JsonObject response = new JsonObject();
+      response.addProperty("success", true);
+      response.addProperty("subscriptionId", subscription.getId());
+      response.addProperty("message", "Subscription saved");
+      
+      return ResponseEntity.status(HttpStatus.OK).body(response.toString());
+    }
+    else {
+    
+      JsonObject response = new JsonObject();
+      response.addProperty("success", false);
+      response.addProperty("message", "failure saving subscription");
+      
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response.toString());
+    }
+  }
+  
+  @RequestMapping(value = "/getNode/{nodeId}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<String> getNode(@PathVariable String nodeId) {
+    
+    Optional<Node> node = databaseService.getNodeById(nodeId);
+    
+    if(node.isEmpty())
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Node doesn't exists");
+
+    Gson gson = new GsonBuilder().setPrettyPrinting().create();
+    
+    return ResponseEntity.status(HttpStatus.OK).body(gson.toJson(node.get().toJson()));
+  }
+  
+  @RequestMapping(value = "/getSubscription/{subscriptionId}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<String> getSubscription(@PathVariable String subscriptionId) {
+    
+    Optional<Subscription> subscription = databaseService.getSubscriptionById(subscriptionId);
+    
+    if(subscription.isEmpty())
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Subscription doesn't exists");
+
+    Gson gson = new GsonBuilder().setPrettyPrinting().create();
+    
+    return ResponseEntity.status(HttpStatus.OK).body(gson.toJson(subscription.get().toJson()));
+  }
+  
+  @RequestMapping(value = "/getUndeliveredEvents/{nodeId}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<String> getEvents(@PathVariable String nodeId) {
     
     Node node = new Node(nodeId);
     
@@ -231,9 +357,9 @@ public class WebController {
     Optional<Node> node = databaseService.getNodeById(nodeId);
     
     if(node.isEmpty())
-      return ResponseEntity.status(HttpStatus.NOT_FOUND).body("{}");
+      return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new JsonArray().toString());
     
-    List<NodeSubscription> nodeSubscriptions = databaseService.getNodeSubscriptions(node.get());
+    List<NodeSubscription> nodeSubscriptions = databaseService.getNodeSubscriptions(node.get().getId());
     
     JsonArray payload = new JsonArray();
     

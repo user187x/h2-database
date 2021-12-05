@@ -201,46 +201,48 @@ public class DatabaseService {
   
   public boolean subscriptionExists(String channel, String topic) {
     
-    Optional<List<Subscription>> list = Optional.ofNullable(DSL.using(getConnection())
-    .select()
-    .from(DSL.table(Tables.SUBSCRIPTIONS.name()))
-    .where(DSL.field("TOPIC").eq(topic).and(DSL.field("CHANNEL").eq(channel)))
-    .fetch()
-    .into(Subscription.class));
+    List<Subscription> list = null;
     
-    if(list.isPresent()) {
-      
-      List<Subscription> subscriptionList = list.get();
-      
-      if(subscriptionList.isEmpty())
-        return false;
-      else
-        return true;
+    try {
+    
+      list = DSL.using(getConnection())
+      .select()
+      .from(DSL.table(Tables.SUBSCRIPTIONS.name()))
+      .where(DSL.field("TOPIC").eq(topic).and(DSL.field("CHANNEL").eq(channel)))
+      .fetch()
+      .into(Subscription.class);
+    }
+    catch(Exception e) {
+      return false; 
     }
     
-    return false;
+    if(list != null && !list.isEmpty())
+      return true;
+    else
+      return false;
   }
   
   public boolean subscriptionExists(String subcriptionId) {
     
-    Optional<List<Subscription>> list = Optional.ofNullable(DSL.using(getConnection())
-    .select()
-    .from(DSL.table(Tables.SUBSCRIPTIONS.name()))
-    .where(DSL.field("ID").eq(subcriptionId))
-    .fetch()
-    .into(Subscription.class));
+    List<Subscription> list = null;
     
-    if(list.isPresent()) {
-      
-      List<Subscription> subscriptionList = list.get();
-      
-      if(subscriptionList.isEmpty())
-        return false;
-      else
-        return true;
+    try {
+    
+      list = DSL.using(getConnection())
+      .select()
+      .from(DSL.table(Tables.SUBSCRIPTIONS.name()))
+      .where(DSL.field("ID").eq(subcriptionId))
+      .fetch()
+      .into(Subscription.class);
+    }
+    catch(Exception e) {
+      return false; 
     }
     
-    return false;
+    if(list != null && !list.isEmpty())
+      return true;
+    else
+      return false;
   }
   
   public boolean eventExists(Event event) {
@@ -545,8 +547,8 @@ public class DatabaseService {
     Optional<List<UndeliveredEvent>> nodeSubscription = Optional.ofNullable(DSL.using(getConnection())
     .select()
     .from(DSL.table(Tables.UNDELIVERED_EVENTS.name()))
-    .where(DSL.field("ID").eq(undeliveredEvent.getId()).or(DSL.field("NODE_ID").eq(undeliveredEvent.getNodeId())
-        .and(DSL.field("EVENT_ID").eq(undeliveredEvent.getEventId()))))
+    .where(DSL.field("ID").eq(undeliveredEvent.getId())
+        .or(DSL.field("NODE_ID").eq(undeliveredEvent.getNodeId()).and(DSL.field("EVENT_ID").eq(undeliveredEvent.getEventId()))))
     .fetch()
     .into(UndeliveredEvent.class));
     
@@ -623,6 +625,23 @@ public class DatabaseService {
       .select()
       .from(DSL.table(Tables.SUBSCRIPTIONS.name()))
       .where(DSL.field("ID").eq(id))
+      .fetchOne()
+      .into(Subscription.class));
+    }
+    catch(Exception e) {
+      
+      return Optional.empty();
+    }
+  }
+  
+  public Optional<Subscription> getSubscription(String topic, String channel) {
+    
+    try {
+    
+      return Optional.ofNullable(DSL.using(getConnection())
+      .select()
+      .from(DSL.table(Tables.SUBSCRIPTIONS.name()))
+      .where(DSL.field("TOPIC").eq(topic).and(DSL.field("CHANNEL").eq(channel)))
       .fetchOne()
       .into(Subscription.class));
     }
@@ -804,12 +823,12 @@ public class DatabaseService {
     return nodeSubscriptions;
   }
   
-  public List<NodeSubscription> getNodeSubscriptions(Node node) {
+  public List<NodeSubscription> getNodeSubscriptions(String nodeId) {
     
     List<NodeSubscription> nodeSubscriptions = DSL.using(getConnection())
     .select()
     .from(DSL.table(Tables.NODE_SUBSCRIPTIONS.name()))
-    .where(DSL.field("NODE_ID").eq(node.getId()))
+    .where(DSL.field("NODE_ID").eq(nodeId))
     .fetch()
     .into(NodeSubscription.class);
     

@@ -2,7 +2,10 @@ package com.xxx.management;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.logging.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import com.xxx.model.Event;
 import com.xxx.model.Node;
@@ -11,8 +14,11 @@ import com.xxx.model.UndeliveredEvent;
 import com.xxx.service.DatabaseService;
 
 @Component
+@EnableScheduling
 public class EventManager {
 
+  private static final Logger logger = Logger.getLogger(EventManager.class.getSimpleName());
+  
   @Autowired
   private DatabaseService databaseService;
   
@@ -45,5 +51,13 @@ public class EventManager {
         }
       }
     }
+  }
+  
+  @Scheduled(fixedDelay = 1000)
+  public void cleanUpNonSubscribedTopic() {
+    
+    logger.info("Purging non-subscribed subscriptions");
+    
+    //TODO
   }
 }
