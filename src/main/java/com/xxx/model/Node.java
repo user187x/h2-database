@@ -9,6 +9,7 @@ public class Node {
 
   private String id = UUID.randomUUID().toString();
   private String name = null;
+  private String endpoint = null;
   private Timestamp lastSeen = new Timestamp(new Date().getTime());
   private Timestamp created = new Timestamp(new Date().getTime());
 
@@ -34,6 +35,14 @@ public class Node {
     this.name = name;
   }
 
+  public String getEndpoint() {
+    return endpoint;
+  }
+
+  public void setEndpoint(String endpoint) {
+    this.endpoint = endpoint;
+  }
+
   public Timestamp getLastSeen() {
     return lastSeen;
   }
@@ -56,6 +65,7 @@ public class Node {
     
     json.addProperty("id", id);
     json.addProperty("name", name);
+    json.addProperty("endpoint", endpoint);
     json.addProperty("lastSeen", lastSeen.toString());
     json.addProperty("created", created.toString());
     

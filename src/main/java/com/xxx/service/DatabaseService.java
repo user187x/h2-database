@@ -15,6 +15,7 @@ import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
 import com.xxx.model.Event;
 import com.xxx.model.Node;
+import com.xxx.model.NodeHealth;
 import com.xxx.model.NodeSubscription;
 import com.xxx.model.Subscription;
 import com.xxx.model.UndeliveredEvent;
@@ -365,12 +366,14 @@ public class DatabaseService {
     boolean success = Optional.ofNullable(DSL.using(getConnection())
     .insertInto(DSL.table(Tables.NODES.name()), 
         DSL.field("ID"), 
-        DSL.field("NAME"), 
+        DSL.field("NAME"),
+        DSL.field("ENDPOINT"),
         DSL.field("LAST_SEEN"), 
         DSL.field("CREATED"))
     .values(
         node.getId(), 
-        node.getName(), 
+        node.getName(),
+        node.getEndpoint(),
         node.getLastSeen(), 
         node.getCreated())
     .execute())
@@ -385,6 +388,7 @@ public class DatabaseService {
     boolean success = Optional.ofNullable(DSL.using(getConnection())
     .update(DSL.table(Tables.NODES.name()))
     .set(DSL.field("NAME", SQLDataType.VARCHAR), node.getName())
+    .set(DSL.field("ENDPOINT", SQLDataType.VARCHAR), node.getEndpoint())
     .set(DSL.field("LAST_SEEN", SQLDataType.TIMESTAMP), DSL.currentTimestamp())
     .execute())
     .map(count -> count == 1)
@@ -405,6 +409,46 @@ public class DatabaseService {
     return success;
   }
   
+  public boolean cascadeDeleteNode(Node node) {
+    
+    boolean success = deleteNodeHealth(node);
+    
+    if(success)
+      success = deleteAnyUndeliveredEvents(node);
+    else
+      return false;
+    
+    if(success)
+      success = deleteAnyNodeSubscriptions(node);
+    else
+      return false;
+    
+    if(success)
+      success = deleteNode(node);
+    else
+      return false;
+    
+    return success;
+  }
+  
+  private boolean deleteAnyUndeliveredEvents(Node node) {
+ 
+    try {
+    
+      DSL.using(getConnection())
+      .select()
+      .from(DSL.table(Tables.UNDELIVERED_EVENTS.name()))
+      .where(DSL.field("NODE_ID").eq(node.getId()))
+      .execute();
+      
+      return true;
+    }
+    catch(Exception e) {
+      
+      return false;
+    }
+  }
+
   public boolean deleteEvent(Event event) {
     
     boolean success = Optional.ofNullable(DSL.using(getConnection())
@@ -468,6 +512,18 @@ public class DatabaseService {
     boolean success = Optional.ofNullable(DSL.using(getConnection())
     .delete(DSL.table(Tables.SUBSCRIPTIONS.name()))
     .where(DSL.field("ID").eq(subscription.getId()))
+    .execute())
+    .map(count -> count == 1)
+    .get();
+    
+    return success;
+  }
+  
+  public boolean deleteAnyNodeSubscriptions(Node node) {
+    
+    boolean success = Optional.ofNullable(DSL.using(getConnection())
+    .delete(DSL.table(Tables.SUBSCRIPTIONS.name()))
+    .where(DSL.field("NODE_ID").eq(node.getId()))
     .execute())
     .map(count -> count == 1)
     .get();
@@ -939,5 +995,110 @@ public class DatabaseService {
     .into(UndeliveredEvent.class);
     
     return undeliveredEvents;
+  }
+  
+  
+  public boolean updateNodeHealth(Node node, NodeHealth nodeHealth) {
+    
+    boolean success = Optional.of(DSL.using(getConnection())
+    .update(DSL.table(Tables.NODE_HEALTH.name()))
+    .set(DSL.field("LASTSEEN", SQLDataType.TIMESTAMP), nodeHealth.getLastSeen())
+    .set(DSL.field("HEALTHY", SQLDataType.BOOLEAN), nodeHealth.isHealthy())
+    .where(DSL.field("NODE_ID").eq(node.getId()))
+    .execute())
+    .map(count -> count == 1)
+    .get();
+    
+    return success;
+  }
+  
+  public List<NodeHealth> getNodeHealth() {
+    
+    List<NodeHealth> nodeHealths = DSL.using(getConnection())
+    .select()
+    .from(DSL.table(Tables.NODE_HEALTH.name()))
+    .fetch()
+    .into(NodeHealth.class);
+    
+    return nodeHealths;
+  }
+
+  public List<Node> getUnhealthyNodes() {
+    
+    List<Node> nodeHealths = DSL.using(getConnection())
+    .select()
+    .from(DSL.table(Tables.NODES.name()))
+    .join(DSL.table(Tables.NODE_HEALTH.name()))
+    .on(DSL.field("NODE.ID").eq(DSL.field("NODE_HEALTH.NODE_ID")))
+    .where(DSL.field("NODE_HEALTH.HEALTHY").isFalse())
+    .fetch()
+    .into(Node.class);
+    
+    return nodeHealths;
+  }
+
+  public boolean deleteNodeHealth(Node node) {
+    
+    boolean success = Optional.ofNullable(DSL.using(getConnection())
+    .delete(DSL.table(Tables.NODE_HEALTH.name()))
+    .where(DSL.field("NODE_ID").eq(node.getId()))
+    .execute())
+    .map(count -> count == 1)
+    .get();
+    
+    return success;
+  }
+  
+  public boolean deleteNodeHealth(NodeHealth nodeHealth) {
+    
+    boolean success = Optional.ofNullable(DSL.using(getConnection())
+    .delete(DSL.table(Tables.NODE_HEALTH.name()))
+    .where(DSL.field("ID").eq(nodeHealth.getId()))
+    .execute())
+    .map(count -> count == 1)
+    .get();
+    
+    return success;
+  }
+  
+  public boolean saveNodeHealth(NodeHealth nodeHealth) {
+    
+    boolean success = Optional.ofNullable(DSL.using(getConnection())
+    .insertInto(DSL.table(Tables.NODE_HEALTH.name()), 
+        DSL.field("ID"), 
+        DSL.field("NODE_ID"),
+        DSL.field("LAST_ATTEMPT"),
+        DSL.field("LAST_SEEN"),
+        DSL.field("ATTEMPT_COUNT"),
+        DSL.field("CREATED"))
+    .values(
+        nodeHealth.getId(),
+        nodeHealth.getNodeId(),
+        nodeHealth.getLastAttempt(), 
+        nodeHealth.getLastSeen(),
+        nodeHealth.getAttemptCount(),
+        nodeHealth.getCreated())
+    .execute())
+    .map(count -> count == 1)
+    .get();
+    
+    return success;
+  }
+
+  public Optional<NodeHealth> getNodeHealth(Node node) {
+
+    try {
+      
+      return Optional.of(DSL.using(getConnection())
+      .select()
+      .from(DSL.table(Tables.NODE_HEALTH.name()))
+      .where(DSL.field("NODE_ID").eq(node.getId()))
+      .fetchOne()
+      .into(NodeHealth.class));
+    }
+    catch(Exception e){
+      
+      return Optional.empty();
+    }
   }
 }

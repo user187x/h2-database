@@ -10,7 +10,7 @@ public class SQLUtil {
   
   private static final Logger logger = Logger.getLogger(SQLUtil.class.getSimpleName());
   
-  public static enum Tables {EVENTS, NODES, NODE_SUBSCRIPTIONS, SUBSCRIPTIONS, UNDELIVERED_EVENTS}
+  public static enum Tables {EVENTS, NODES, NODE_SUBSCRIPTIONS, SUBSCRIPTIONS, UNDELIVERED_EVENTS, NODE_HEALTH}
   
   public static boolean ensureTables(Connection connection) {
     
@@ -21,6 +21,7 @@ public class SQLUtil {
       SQLUtil.createNodeSubscriptionTable(connection);
       SQLUtil.createEventTable(connection);
       SQLUtil.createUndeliveredEventsTable(connection);
+      SQLUtil.createNodeHealthTable(connection);
     } 
     catch (Exception e) {
 
@@ -78,6 +79,7 @@ public class SQLUtil {
     .createTableIfNotExists(Tables.NODES.name())
     .column("ID", SQLDataType.VARCHAR(256).nullable(false))
     .column("NAME", SQLDataType.VARCHAR(256).nullable(false))
+    .column("ENDPOINT", SQLDataType.VARCHAR(256).nullable(false))
     .column("LAST_SEEN", SQLDataType.TIMESTAMP.nullable(false))
     .column("CREATED", SQLDataType.TIMESTAMP.nullable(false))
     .constraints(
@@ -102,6 +104,28 @@ public class SQLUtil {
       DSL.primaryKey("ID"),
       DSL.unique("ID"),
       DSL.foreignKey("SUBSCRIPTION_ID").references(Tables.SUBSCRIPTIONS.name()),
+      DSL.foreignKey("NODE_ID").references(Tables.NODES.name())
+    )
+    .execute())
+    .map(count -> count == 0)
+    .get();
+    
+    return success;
+  }
+  
+  public static boolean createNodeHealthTable(Connection connection) {
+    
+    boolean success = Optional.ofNullable(DSL.using(connection)
+    .createTableIfNotExists(Tables.NODE_SUBSCRIPTIONS.name())
+    .column("ID", SQLDataType.VARCHAR(256).nullable(false))
+    .column("NODE_ID", SQLDataType.VARCHAR(256).nullable(false))
+    .column("HEALTHY", SQLDataType.BOOLEAN.nullable(false))
+    .column("ATTEMPT_COUNT", SQLDataType.INTEGER.nullable(false))
+    .column("LAST_SEEN", SQLDataType.TIMESTAMP.nullable(false))
+    .column("CREATED", SQLDataType.TIMESTAMP.nullable(false))
+    .constraints(
+      DSL.primaryKey("ID"),
+      DSL.unique("ID"),
       DSL.foreignKey("NODE_ID").references(Tables.NODES.name())
     )
     .execute())

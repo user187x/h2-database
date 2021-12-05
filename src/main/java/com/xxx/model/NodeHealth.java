@@ -7,9 +7,11 @@ import java.util.UUID;
 public class NodeHealth {
 
   private String id = UUID.randomUUID().toString();
+  private String nodeId;
   private boolean healthy = true;
   private int attemptCount = 0;
-  private Timestamp lastSeen = new Timestamp(new Date().getTime());
+  private Timestamp lastSeen = null;
+  private Timestamp lastAttempt = null;
   private Timestamp created = new Timestamp(new Date().getTime());
 
   public String getId() {
@@ -18,6 +20,14 @@ public class NodeHealth {
 
   public void setId(String id) {
     this.id = id;
+  }
+
+  public String getNodeId() {
+    return nodeId;
+  }
+
+  public void setNodeId(String nodeId) {
+    this.nodeId = nodeId;
   }
 
   public boolean isHealthy() {
@@ -31,6 +41,14 @@ public class NodeHealth {
   public int getAttemptCount() {
     return attemptCount;
   }
+  
+  public void incrementAttemptCount() {
+    this.attemptCount++;
+  }
+  
+  public void resetAttemptCount() {
+    this.attemptCount = 0;
+  }
 
   public void setAttemptCount(int attemptCount) {
     this.attemptCount = attemptCount;
@@ -39,11 +57,20 @@ public class NodeHealth {
   public Timestamp getLastSeen() {
     return lastSeen;
   }
-
-  public void setLastSeen(Timestamp lastSeen) {
-    this.lastSeen = lastSeen;
+  
+  public void setLastSeen() {
+    this.lastSeen = new Timestamp(new Date().getTime());
   }
 
+  public Timestamp getLastAttempt() {
+    return lastAttempt;
+  }
+  
+  public void setLastAttempt() {
+    this.lastAttempt = new Timestamp(new Date().getTime());
+  }
+
+  
   public Timestamp getCreated() {
     return created;
   }
