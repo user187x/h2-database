@@ -1029,8 +1029,8 @@ public class DatabaseService {
     .select()
     .from(DSL.table(Tables.NODES.name()))
     .join(DSL.table(Tables.NODE_HEALTH.name()))
-    .on(DSL.field("NODE.ID").eq(DSL.field("NODE_HEALTH.NODE_ID")))
-    .where(DSL.field("NODE_HEALTH.HEALTHY").isFalse())
+    .on(DSL.field("NODES.ID").eq(DSL.field("NODE_HEALTH.NODE_ID")))
+    .where(DSL.field("NODE_HEALTH.HEALTHY").eq(false))
     .fetch()
     .into(Node.class);
     

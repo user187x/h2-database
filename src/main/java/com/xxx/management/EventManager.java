@@ -2,6 +2,7 @@ package com.xxx.management;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -12,6 +13,7 @@ import com.xxx.model.Node;
 import com.xxx.model.Subscription;
 import com.xxx.model.UndeliveredEvent;
 import com.xxx.service.DatabaseService;
+import com.xxx.util.Requester;
 
 @Component
 @EnableScheduling
@@ -26,21 +28,23 @@ public class EventManager {
     this.databaseService = databaseService;
   }
   
-  public void broadCastEvent(Event event) {
+  public CompletableFuture<Void> asyncBroadastEvent(Event event) { 
+    return CompletableFuture.runAsync(() -> broadCastEvent(event));
+  }
+  
+  public synchronized void broadCastEvent(Event event) {
 
-    Optional<Subscription> optional = databaseService.getSubscriptionById(event.getSubscriptionId());
+    Optional<Subscription> subscription = databaseService.getSubscriptionById(event.getSubscriptionId());
     
-    if(optional.isPresent()) {
+    if(subscription.isPresent()) {
     
-      Subscription subscription = optional.get();
-      List<Node> nodes = databaseService.getSubscribedNodes(subscription);
+      List<Node> nodes = databaseService.getSubscribedNodes(subscription.get());
       
       for(Node node : nodes) {
       
-        //TODO makes this meaningful somehow
-        boolean success = false;
+        boolean sendSuccess = Requester.sendEvent(node, event);
         
-        if(!success) {
+        if(!sendSuccess) {
           
           UndeliveredEvent undeliveredEvent = new UndeliveredEvent();
           

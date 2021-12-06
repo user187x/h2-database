@@ -116,7 +116,7 @@ public class SQLUtil {
   public static boolean createNodeHealthTable(Connection connection) {
     
     boolean success = Optional.ofNullable(DSL.using(connection)
-    .createTableIfNotExists(Tables.NODE_SUBSCRIPTIONS.name())
+    .createTableIfNotExists(Tables.NODE_HEALTH.name())
     .column("ID", SQLDataType.VARCHAR(256).nullable(false))
     .column("NODE_ID", SQLDataType.VARCHAR(256).nullable(false))
     .column("HEALTHY", SQLDataType.BOOLEAN.nullable(false))

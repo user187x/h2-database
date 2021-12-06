@@ -247,7 +247,7 @@ public class WebController {
     
     if(eventSaveSuccess) {
       
-      eventManager.broadCastEvent(event);
+      eventManager.asyncBroadastEvent(event);
       
       JsonObject response = new JsonObject();
       response.addProperty("success", true);
