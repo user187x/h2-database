@@ -3,8 +3,8 @@ server:
 database:
   user: xxx
   password: xxx
-  inmemory: false
-  path: "C:/Users/xxx/Desktop/h2-database"
+  in-memory: true
+  path: "C:/Users/xxx/Desktop/"
   gui-port: 8888
 nodeHealth:
   max-attempt-count: 5

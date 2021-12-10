@@ -33,13 +33,19 @@ public class DatabaseService {
   private boolean inMemory = true;
   
   private String databasePath = "jdbc:h2:file:";
+  private String inMemoryPath = "jdbc:h2:mem:";
   
   private String user;
   private String password;
+  private String databaseName = "xxx";
   private Integer guiPort = 8888;
   
   public DatabaseService() {}
 
+  public void setInMemory(boolean inMemory) {
+    this.inMemory = inMemory;
+  }
+  
   public String getUser() {
     return user;
   }
@@ -56,6 +62,14 @@ public class DatabaseService {
     this.password = password;
   }
 
+  public void setDatabaseName(String databaseName) {
+    this.databaseName = databaseName;
+  }
+  
+  public String getDatabaseName() {
+    return databaseName;
+  }
+  
   public void setDatabasePath(String path) {
     
     if(StringUtils.isNoneBlank(path)) {
@@ -86,7 +100,10 @@ public class DatabaseService {
      
      this.dbGuiActive = true;
      
-     logger.info("Database GUI has been activated");
+     logger.info("Database GUI has been activated @ http://localhost:" + guiPort);
+     logger.info("Database UI -> JDBC URL : jdbc:h2:mem:" + getDatabaseName());
+     logger.info("Database UI -> User : " + getUser());
+     logger.info("Database UI -> Password : ???");
    }
    catch(Exception e) {
     
@@ -117,21 +134,19 @@ public class DatabaseService {
  
     try {
       
+      Class.forName("org.h2.Driver"); 
+      
       System.getProperties().setProperty("org.jooq.no-logo", "true");
       System.getProperties().setProperty("org.jooq.no-tips", "true");
  
-      if(!inMemory) {
-        
-        if(StringUtils.isNoneBlank(password)) { 
-          this.databasePath = databasePath.concat(";" + "USER=" + getUser() + ";" + "PASSWORD=" + getPassword());
-          
-          connection = DriverManager.getConnection(databasePath);
-        }
-      }
-      else {
-        
-        connection = DriverManager.getConnection(databasePath);
-      }
+      String database = Optional.of(inMemory)
+      .filter(Boolean::valueOf)
+      .map(bool -> inMemoryPath)
+      .orElse(databasePath);
+      
+      connection = DriverManager.getConnection(database + getDatabaseName(), getUser(), getPassword());
+      
+      startGUIServer();
       
       SQLUtil.ensureTables(connection);
       

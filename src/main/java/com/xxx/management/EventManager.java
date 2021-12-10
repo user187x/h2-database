@@ -38,13 +38,9 @@ public class EventManager {
     
     if(subscription.isPresent()) {
     
-      List<Node> nodes = databaseService.getSubscribedNodes(subscription.get());
+      for(Node node : databaseService.getSubscribedNodes(subscription.get())) {
       
-      for(Node node : nodes) {
-      
-        boolean sendSuccess = Requester.sendEvent(node, event);
-        
-        if(!sendSuccess) {
+        if(!Requester.sendEvent(node, event)) {
           
           UndeliveredEvent undeliveredEvent = new UndeliveredEvent();
           

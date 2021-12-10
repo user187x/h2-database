@@ -17,6 +17,9 @@ public class Initializer {
   @Autowired
   private ApplicationContext context;
   
+  @Value("${database.in-memory}")
+  private boolean inMemory;
+  
   @Value("${database.path}")
   private String dbpath;
   
@@ -35,6 +38,7 @@ public class Initializer {
     DatabaseService databaseService = new DatabaseService();
     
     databaseService.setDatabasePath(dbpath);
+    databaseService.setInMemory(inMemory);
     databaseService.setUser(user);
     databaseService.setDatabaseGuiPort(guiPort);
     databaseService.setPassword(password);
